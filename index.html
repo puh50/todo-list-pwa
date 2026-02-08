@@ -1046,6 +1046,7 @@
         // === PWA УСТАНОВКА ===
         let deferredPrompt = null;
         let installButton = null;
+        let appInstalled = false; // Флаг установки приложения
         
         // Проверка, является ли iOS Safari
         function isIOS() {
@@ -1057,10 +1058,16 @@
             return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         }
         
-        // Проверка, открыто ли приложение в standalone режиме (уже установлено)
+        // Проверка, открыто ли приложение в standalone режиме (уже установлено и запущено как PWA)
         function isStandalone() {
             return window.matchMedia('(display-mode: standalone)').matches || 
                    window.navigator.standalone === true;
+        }
+        
+        // Проверка, установлено ли приложение (даже если открыто в браузере)
+        function isAppInstalled() {
+            // Проверяем флаг установки, который устанавливается при событии appinstalled
+            return appInstalled || localStorage.getItem('pwaInstalled') === 'true';
         }
         
         // Проверка, можно ли установить PWA (критерии браузера)
@@ -1068,14 +1075,42 @@
             return 'BeforeInstallPromptEvent' in window;
         }
         
-        // Создание кнопки установки
+        // Открыть установленное приложение
+        function openInstalledApp() {
+            console.log('Пытаемся открыть установленное приложение');
+            
+            // Для Android/Chrome можно попробовать открыть через intent
+            if (navigator.userAgent.includes('Android') || navigator.userAgent.includes('Chrome')) {
+                // Пытаемся открыть через deep link
+                const currentUrl = window.location.href;
+                const appUrl = currentUrl.replace(/^https?:\/\//, 'todoapp://');
+                
+                // Создаем iframe для попытки открытия приложения
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = appUrl;
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                    // Если не открылось за 500мс, показываем инструкции
+                    showNotification('Не удалось открыть приложение. Откройте его вручную.');
+                    showOpenAppInstructions();
+                }, 500);
+            } else {
+                // Для других платформ показываем инструкции
+                showOpenAppInstructions();
+            }
+        }
+        
+        // Создание кнопки установки/открытия
         function createInstallButton() {
             // Удаляем старую кнопку, если есть
             if (installButton && document.body.contains(installButton)) {
                 document.body.removeChild(installButton);
             }
             
-            // Если приложение уже установлено - не создаем кнопку
+            // Если приложение уже запущено в standalone режиме - не создаем кнопку
             if (isStandalone()) {
                 console.log('Приложение уже запущено в standalone режиме - кнопка не нужна');
                 return;
@@ -1089,7 +1124,13 @@
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
             
-            if (isIOSDevice && isSafariBrowser) {
+            // Проверяем, установлено ли приложение
+            if (isAppInstalled()) {
+                // Приложение установлено, но открыто в браузере
+                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> Открыть в приложении';
+                installButton.classList.add('open-app-button');
+                installButton.onclick = openInstalledApp;
+            } else if (isIOSDevice && isSafariBrowser) {
                 // iOS Safari - предлагаем добавить на главный экран
                 installButton.innerHTML = '<i class="fas fa-plus-circle"></i> Добавить на главный экран';
                 installButton.onclick = showIOSInstallInstructions;
@@ -1099,12 +1140,12 @@
                 installButton.onclick = installPWA;
             } else {
                 // Браузеры, где установка через меню
-                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> Открыть как приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
                 installButton.onclick = showInstallInstructions;
             }
             
             document.body.appendChild(installButton);
-            console.log('Кнопка установки создана');
+            console.log('Кнопка создана: установлено =', isAppInstalled());
         }
         
         // Установка PWA (для поддерживающих браузеров)
@@ -1128,7 +1169,7 @@
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
                     showNotification('Приложение устанавливается...');
-                    // Кнопка скроется автоматически после appinstalled
+                    // Флаг установки будет установлен при событии appinstalled
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
@@ -1194,7 +1235,82 @@
             });
         }
         
-        // Показать общие инструкции по установке
+        // Показать инструкции по открытию приложения
+        function showOpenAppInstructions() {
+            const modal = document.createElement('div');
+            modal.className = 'install-modal';
+            
+            const browser = detectBrowser();
+            let instructions = '';
+            
+            if (browser === 'chrome') {
+                instructions = `
+                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
+                    <p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу браузера</p>
+                    <p>2. Выберите <strong>"Открыть в приложении To-Do List"</strong></p>
+                    <p>Или откройте приложение с главного экрана вашего устройства.</p>
+                `;
+            } else if (browser === 'firefox') {
+                instructions = `
+                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
+                    <p>1. Нажмите <strong>☰</strong> (меню)</p>
+                    <p>2. Выберите <strong>"Открыть в приложении"</strong></p>
+                    <p>Или откройте приложение с главного экрана вашего устройства.</p>
+                `;
+            } else if (browser === 'safari') {
+                instructions = `
+                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
+                    <p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана</p>
+                    <p>2. Или нажмите "Поделиться" в Safari и выберите "Открыть в приложении"</p>
+                `;
+            } else {
+                instructions = `
+                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
+                    <p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана вашего устройства</p>
+                    <p>2. Или используйте меню браузера для открытия в приложении</p>
+                `;
+            }
+            
+            modal.innerHTML = `
+                <div class="install-modal-content">
+                    <h2 style="color: #333; margin-bottom: 20px;">
+                        <i class="fas fa-external-link-alt" style="color: #00b09b;"></i>
+                        Открыть в приложении
+                    </h2>
+                    <div style="text-align: left; margin-bottom: 25px; color: #555;">
+                        ${instructions}
+                    </div>
+                    <button id="closeInstallModal" style="
+                        background: linear-gradient(135deg, #00b09b, #96c93d);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        padding: 12px 30px;
+                        font-size: 16px;
+                        cursor: pointer;
+                        font-weight: 600;
+                    ">
+                        Закрыть
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Закрытие модального окна
+            modal.querySelector('#closeInstallModal').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            // Закрытие по клику на фон
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+        
+        // Показать инструкции по установке
         function showInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
@@ -1204,20 +1320,20 @@
             
             if (browser === 'chrome') {
                 instructions = `
-                    <p><strong>Для Chrome/Edge/Opera:</strong></p>
+                    <p><strong>Для установки в Chrome/Edge/Opera:</strong></p>
                     <p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу</p>
                     <p>2. Выберите <strong>"Установить приложение"</strong></p>
                     <p>3. Подтвердите установку</p>
                 `;
             } else if (browser === 'firefox') {
                 instructions = `
-                    <p><strong>Для Firefox:</strong></p>
+                    <p><strong>Для установки в Firefox:</strong></p>
                     <p>1. Нажмите <strong>☰</strong> (меню)</p>
                     <p>2. Выберите <strong>"Установить"</strong></p>
                 `;
             } else {
                 instructions = `
-                    <p><strong>Общие инструкции:</strong></p>
+                    <p><strong>Для установки приложения:</strong></p>
                     <p>1. Откройте меню браузера (⋮ или ☰)</p>
                     <p>2. Найдите пункт "Установить приложение"</p>
                     <p>3. Подтвердите установку</p>
@@ -1266,10 +1382,10 @@
         // Определение браузера
         function detectBrowser() {
             const userAgent = navigator.userAgent.toLowerCase();
-            if (userAgent.includes('chrome')) return 'chrome';
+            if (userAgent.includes('chrome') && !userAgent.includes('edg')) return 'chrome';
             if (userAgent.includes('firefox')) return 'firefox';
-            if (userAgent.includes('safari')) return 'safari';
-            if (userAgent.includes('edge')) return 'edge';
+            if (userAgent.includes('safari') && !userAgent.includes('chrome')) return 'safari';
+            if (userAgent.includes('edg')) return 'edge';
             return 'other';
         }
         
@@ -1309,25 +1425,19 @@
         // Событие успешной установки
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA успешно установлено!');
+            appInstalled = true;
+            localStorage.setItem('pwaInstalled', 'true');
             
-            // Скрываем кнопку установки
-            if (installButton && document.body.contains(installButton)) {
-                document.body.removeChild(installButton);
-                installButton = null;
+            // Обновляем кнопку (теперь она должна стать "Открыть в приложении")
+            if (!isStandalone()) {
+                createInstallButton();
             }
             
             // Очищаем deferredPrompt
             deferredPrompt = null;
             
             // Показываем уведомление
-            showNotification('Приложение установлено! Откройте его с главного экрана.');
-            
-            // Можно перенаправить на standalone версию
-            setTimeout(() => {
-                if (!isStandalone()) {
-                    window.location.reload();
-                }
-            }, 1000);
+            showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
         
         // Регистрация Service Worker
@@ -1406,7 +1516,7 @@
                 document.body.removeChild(installButton);
                 installButton = null;
             }
-        }, 5000);
+        }, 2000);
     </script>
 </body>
 </html>
