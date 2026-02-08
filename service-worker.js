@@ -1,6 +1,5 @@
 // Конфигурация кэша
 const CACHE_NAME = 'todo-app-v3.0';
-const OFFLINE_URL = '/todo-list-pwa/offline.html';
 const urlsToCache = [
   '/todo-list-pwa/',
   '/todo-list-pwa/index.html',
