@@ -2,9 +2,11 @@
 const CACHE_NAME = 'todo-app-v2.0';
 const OFFLINE_URL = '/offline.html';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  '/todo-list-pwa/',                 // Главная страница с именем репозитория
+  '/todo-list-pwa/index.html',       // Альтернативный путь
+  '/todo-list-pwa/manifest.json',
+  '/todo-list-pwa/icons/icon-192.png',
+  '/todo-list-pwa/icons/icon-512.png'
   // CDN ресурсы кэшируются динамически
 ];
 
