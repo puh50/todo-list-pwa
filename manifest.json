@@ -2,12 +2,12 @@
   "name": "To-Do List",
   "short_name": "Todo",
   "description": "Приложение для управления задачами с офлайн-доступом",
-  "start_url": "/",
+  "start_url": "/todo-list-pwa/",
   "display": "standalone",
   "background_color": "#6a11cb",
   "theme_color": "#6a11cb",
   "orientation": "portrait",
-  "scope": "/",
+  "scope": "/todo-list-pwa/",
   "icons": [
     {
       "src": "icons/icon-72x72.svg",
