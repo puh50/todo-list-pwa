@@ -18,8 +18,7 @@
     <meta name="msapplication-TileColor" content="#6a11cb">
     <meta name="msapplication-TileImage" content="icons/icon-144x144.svg">
     <meta name="msapplication-config" content="browserconfig.xml">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>">
+    <link rel="icon" href="icons/favicon.svg">
     <link rel="apple-touch-icon"
         href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACwSURBVHgBrdJBCoJAFIbhb4RgoY2rNkELdy5atA0XNbkQTyBhIATdfQdIBbcFbmfgO4o58H8sBBW4Ae+JZ/hgH4ahPGInMMBZqEc2Agc4CpuBlcAN5qImMBVY4C4cewwEZnAFvpM1S2A+08GR9mhGVgIrmI2axIPgPVMj1k3ULAGJh8qODgKSeBKc6BR8BCQxESzoFmwFJC4EC7oGWwGJC4EC7oGWwGJC8ESuoNAwJVgCf0HrP8DACa1ZbCPdHoDAAAAAElFTkSuQmCC">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -437,57 +436,57 @@
         const root = ReactDOM.createRoot(container);
         root.render(React.createElement(TodoApp));
     </script>
-    
+
     <!-- ВТОРОЙ СКРИПТ - УПРАВЛЕНИЕ PWA И УСТАНОВКОЙ -->
     <script>
         // === PWA УСТАНОВКА ===
         let deferredPrompt = null;
         let installButton = null;
         let appInstalled = false; // Флаг установки приложения
-        
+
         // Проверка, является ли iOS Safari
         function isIOS() {
             return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         }
-        
+
         // Проверка, является ли Safari
         function isSafari() {
             return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         }
-        
+
         // Проверка, открыто ли приложение в standalone режиме (уже установлено и запущено как PWA)
         function isStandalone() {
-            return window.matchMedia('(display-mode: standalone)').matches || 
-                   window.navigator.standalone === true;
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true;
         }
-        
+
         // Проверка, установлено ли приложение (даже если открыто в браузере)
         function isAppInstalled() {
             // Проверяем флаг установки, который устанавливается при событии appinstalled
             return appInstalled || localStorage.getItem('pwaInstalled') === 'true';
         }
-        
+
         // Проверка, можно ли установить PWA (критерии браузера)
         function canInstallPWA() {
             return 'BeforeInstallPromptEvent' in window;
         }
-        
+
         // Открыть установленное приложение
         function openInstalledApp() {
             console.log('Пытаемся открыть установленное приложение');
-            
+
             // Для Android/Chrome можно попробовать открыть через intent
             if (navigator.userAgent.includes('Android') || navigator.userAgent.includes('Chrome')) {
                 // Пытаемся открыть через deep link
                 const currentUrl = window.location.href;
                 const appUrl = currentUrl.replace(/^https?:\/\//, 'todoapp://');
-                
+
                 // Создаем iframe для попытки открытия приложения
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 iframe.src = appUrl;
                 document.body.appendChild(iframe);
-                
+
                 setTimeout(() => {
                     document.body.removeChild(iframe);
                     // Если не открылось за 500мс, показываем инструкции
@@ -499,28 +498,28 @@
                 showOpenAppInstructions();
             }
         }
-        
+
         // Создание кнопки установки/открытия
         function createInstallButton() {
             // Удаляем старую кнопку, если есть
             if (installButton && document.body.contains(installButton)) {
                 document.body.removeChild(installButton);
             }
-            
+
             // Если приложение уже запущено в standalone режиме - не создаем кнопку
             if (isStandalone()) {
                 console.log('Приложение уже запущено в standalone режиме - кнопка не нужна');
                 return;
             }
-            
+
             // Проверяем платформу
             const isIOSDevice = isIOS();
             const isSafariBrowser = isSafari();
-            
+
             installButton = document.createElement('button');
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
-            
+
             // Проверяем, установлено ли приложение
             if (isAppInstalled()) {
                 // Приложение установлено, но открыто в браузере
@@ -540,29 +539,29 @@
                 installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
                 installButton.onclick = showInstallInstructions;
             }
-            
+
             document.body.appendChild(installButton);
             console.log('Кнопка создана: установлено =', isAppInstalled());
         }
-        
+
         // Установка PWA (для поддерживающих браузеров)
         async function installPWA() {
             if (!deferredPrompt) {
                 showNotification('Установка пока недоступна. Попробуйте через меню браузера.');
                 return;
             }
-            
+
             console.log('Начинаем установку PWA');
             installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Установка...';
             installButton.disabled = true;
-            
+
             try {
                 // Показываем диалог установки
                 deferredPrompt.prompt();
-                
+
                 // Ждем ответа пользователя
                 const { outcome } = await deferredPrompt.userChoice;
-                
+
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
                     showNotification('Приложение устанавливается...');
@@ -575,7 +574,7 @@
                         createInstallButton();
                     }, 2000);
                 }
-                
+
                 deferredPrompt = null;
             } catch (error) {
                 console.error('Ошибка установки:', error);
@@ -584,12 +583,12 @@
                 installButton.disabled = false;
             }
         }
-        
+
         // Показать инструкции для iOS
         function showIOSInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-            
+
             modal.innerHTML = `
                 <div class="install-modal-content">
                     <h2 style="color: #333; margin-bottom: 20px;">
@@ -616,14 +615,14 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
-            
+
             // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -631,15 +630,15 @@
                 }
             });
         }
-        
+
         // Показать инструкции по открытию приложения
         function showOpenAppInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-            
+
             const browser = detectBrowser();
             let instructions = '';
-            
+
             if (browser === 'chrome') {
                 instructions = `
                     <p><strong>Чтобы открыть в установленном приложении:</strong></p>
@@ -667,7 +666,7 @@
                     <p>2. Или используйте меню браузера для открытия в приложении</p>
                 `;
             }
-            
+
             modal.innerHTML = `
                 <div class="install-modal-content">
                     <h2 style="color: #333; margin-bottom: 20px;">
@@ -691,14 +690,14 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
-            
+
             // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -706,15 +705,15 @@
                 }
             });
         }
-        
+
         // Показать инструкции по установке
         function showInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-            
+
             const browser = detectBrowser();
             let instructions = '';
-            
+
             if (browser === 'chrome') {
                 instructions = `
                     <p><strong>Для установки в Chrome/Edge/Opera:</strong></p>
@@ -736,7 +735,7 @@
                     <p>3. Подтвердите установку</p>
                 `;
             }
-            
+
             modal.innerHTML = `
                 <div class="install-modal-content">
                     <h2 style="color: #333; margin-bottom: 20px;">
@@ -760,14 +759,14 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
-            
+
             // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
-            
+
             // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -775,7 +774,7 @@
                 }
             });
         }
-        
+
         // Определение браузера
         function detectBrowser() {
             const userAgent = navigator.userAgent.toLowerCase();
@@ -785,74 +784,74 @@
             if (userAgent.includes('edg')) return 'edge';
             return 'other';
         }
-        
+
         // Функция показа уведомления
         function showNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'notification';
             notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
-            
+
             document.body.appendChild(notification);
-            
+
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.parentNode.removeChild(notification);
                 }
             }, 3000);
         }
-        
+
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
-        
+
         // Событие beforeinstallprompt (поддерживается Chrome, Edge, Opera)
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('🎯 beforeinstallprompt сработал');
-            
+
             // Предотвращаем автоматический показ
             e.preventDefault();
-            
+
             // Сохраняем событие для использования позже
             deferredPrompt = e;
-            
+
             // Создаем кнопку установки
             if (!isStandalone()) {
                 createInstallButton();
             }
         });
-        
+
         // Событие успешной установки
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA успешно установлено!');
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
-            
+
             // Обновляем кнопку (теперь она должна стать "Открыть в приложении")
             if (!isStandalone()) {
                 createInstallButton();
             }
-            
+
             // Очищаем deferredPrompt
             deferredPrompt = null;
-            
+
             // Показываем уведомление
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
-        
+
         // Регистрация Service Worker
         window.addEventListener('load', () => {
             console.log('Загрузка страницы завершена');
-            
+
             // Проверяем, не запущено ли уже в standalone
             if (isStandalone()) {
                 console.log('Приложение запущено в standalone режиме');
                 return;
             }
-            
+
             // Регистрируем Service Worker
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker зарегистрирован:', registration.scope);
-                        
+
                         // Если beforeinstallprompt не сработал сразу, создаем кнопку через 2 секунды
                         setTimeout(() => {
                             if (!installButton && !isStandalone()) {
@@ -875,7 +874,7 @@
                 }
             }
         });
-        
+
         // Обновление статуса онлайн/офлайн
         function updateOnlineStatus() {
             const statusElement = document.querySelector('.sync-status');
@@ -891,21 +890,21 @@
                 }
             }
         }
-        
+
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
-        
+
         // Инициализация при загрузке DOM
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM загружен');
             updateOnlineStatus();
-            
+
             // Запрос разрешения на уведомления
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
         });
-        
+
         // Периодическая проверка, не изменился ли режим
         setInterval(() => {
             if (isStandalone() && installButton && document.body.contains(installButton)) {
@@ -916,4 +915,5 @@
         }, 2000);
     </script>
 </body>
+
 </html>
