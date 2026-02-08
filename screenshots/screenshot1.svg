@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6a11cb"/>
+      <stop offset="100%" stop-color="#2575fc"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+  
+  <!-- Фон -->
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  
+  <!-- Основное приложение -->
+  <g transform="translate(390, 60)" filter="url(#shadow)">
+    <!-- Контейнер приложения -->
+    <rect x="0" y="0" width="500" height="600" rx="20" fill="rgba(255,255,255,0.95)"/>
+    
+    <!-- Заголовок -->
+    <rect x="0" y="0" width="500" height="80" fill="url(#gradientHeader)" rx="20 20 0 0"/>
+    <linearGradient id="gradientHeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4a00e0"/>
+      <stop offset="100%" stop-color="#8e2de2"/>
+    </linearGradient>
+    
+    <!-- Текст заголовка -->
+    <text x="250" y="40" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" 
+          font-size="28" fill="white" text-anchor="middle" font-weight="bold">
+      <tspan dy="10">📝 To-Do List</tspan>
+    </text>
+    
+    <!-- Статус синхронизации -->
+    <rect x="370" y="15" width="120" height="25" rx="12.5" fill="rgba(46, 204, 113, 0.3)"/>
+    <text x="430" y="30" font-family="'Segoe UI'" font-size="12" fill="white" text-anchor="middle">
+      <tspan dy="3">✓ Синхронизировано</tspan>
+    </text>
+    
+    <!-- Статистика -->
+    <g transform="translate(0, 100)">
+      <rect x="0" y="0" width="500" height="70" fill="#f5f5f5"/>
+      <!-- Всего задач -->
+      <g transform="translate(85, 15)">
+        <text x="0" y="0" font-family="'Segoe UI'" font-size="24" fill="#4a00e0" text-anchor="middle" font-weight="bold">12</text>
+        <text x="0" y="30" font-family="'Segoe UI'" font-size="14" fill="#666" text-anchor="middle">Всего задач</text>
+      </g>
+      <!-- Активных -->
+      <g transform="translate(250, 15)">
+        <text x="0" y="0" font-family="'Segoe UI'" font-size="24" fill="#4a00e0" text-anchor="middle" font-weight="bold">7</text>
+        <text x="0" y="30" font-family="'Segoe UI'" font-size="14" fill="#666" text-anchor="middle">Активных</text>
+      </g>
+      <!-- Выполнено -->
+      <g transform="translate(415, 15)">
+        <text x="0" y="0" font-family="'Segoe UI'" font-size="24" fill="#4a00e0" text-anchor="middle" font-weight="bold">5</text>
+        <text x="0" y="30" font-family="'Segoe UI'" font-size="14" fill="#666" text-anchor="middle">Выполнено</text>
+      </g>
+    </g>
+    
+    <!-- Поле ввода -->
+    <g transform="translate(20, 190)">
+      <rect x="0" y="0" width="360" height="50" rx="10" fill="white" stroke="#e0e0e0" stroke-width="2"/>
+      <text x="20" y="32" font-family="'Segoe UI'" font-size="16" fill="#888">Добавьте новую задачу...</text>
+      <rect x="390" y="0" width="90" height="50" rx="10" fill="url(#gradientHeader)"/>
+      <text x="435" y="30" font-family="'Segoe UI'" font-size="16" fill="white" text-anchor="middle" font-weight="600">+</text>
+    </g>
+    
+    <!-- Кнопки фильтров -->
+    <g transform="translate(20, 260)">
+      <rect x="0" y="0" width="100" height="35" rx="17.5" fill="#4a00e0"/>
+      <text x="50" y="22" font-family="'Segoe UI'" font-size="14" fill="white" text-anchor="middle">Все</text>
+      
+      <rect x="110" y="0" width="110" height="35" rx="17.5" fill="white" stroke="#ddd" stroke-width="1"/>
+      <text x="165" y="22" font-family="'Segoe UI'" font-size="14" fill="#333" text-anchor="middle">Активные</text>
+      
+      <rect x="230" y="0" width="130" height="35" rx="17.5" fill="white" stroke="#ddd" stroke-width="1"/>
+      <text x="295" y="22" font-family="'Segoe UI'" font-size="14" fill="#333" text-anchor="middle">Выполненные</text>
+    </g>
+    
+    <!-- Список задач -->
+    <g transform="translate(20, 320)">
+      <!-- Задача 1 -->
+      <rect x="0" y="0" width="460" height="60" rx="10" fill="white" filter="drop-shadow(0 3px 10px rgba(0,0,0,0.08))"/>
+      <circle cx="40" cy="30" r="11" fill="white" stroke="#4a00e0" stroke-width="2"/>
+      <circle cx="40" cy="30" r="6" fill="#4a00e0"/>
+      <text x="65" y="30" font-family="'Segoe UI'" font-size="17" fill="#333" dy="5">Купить продукты</text>
+      <rect x="400" y="15" width="30" height="30" rx="8" fill="#ff4757"/>
+      <text x="415" y="32" font-family="FontAwesome" font-size="14" fill="white" text-anchor="middle">×</text>
+      
+      <!-- Задача 2 -->
+      <rect x="0" y="70" width="460" height="60" rx="10" fill="#f9f9f9" filter="drop-shadow(0 3px 10px rgba(0,0,0,0.08))"/>
+      <circle cx="40" cy="100" r="11" fill="white" stroke="#888" stroke-width="2"/>
+      <circle cx="40" cy="100" r="6" fill="#888"/>
+      <text x="65" y="100" font-family="'Segoe UI'" font-size="17" fill="#888" dy="5" style="text-decoration: line-through;">
+        Записаться к врачу
+      </text>
+      <rect x="400" y="85" width="30" height="30" rx="8" fill="#ff4757"/>
+      <text x="415" y="102" font-family="FontAwesome" font-size="14" fill="white" text-anchor="middle">×</text>
+      
+      <!-- Задача 3 -->
+      <rect x="0" y="140" width="460" height="60" rx="10" fill="white" filter="drop-shadow(0 3px 10px rgba(0,0,0,0.08))"/>
+      <circle cx="40" cy="170" r="11" fill="white" stroke="#4a00e0" stroke-width="2"/>
+      <text x="65" y="170" font-family="'Segoe UI'" font-size="17" fill="#333" dy="5">Прочитать книгу</text>
+      <rect x="400" y="155" width="30" height="30" rx="8" fill="#ff4757"/>
+      <text x="415" y="172" font-family="FontAwesome" font-size="14" fill="white" text-anchor="middle">×</text>
+    </g>
+    
+    <!-- Футер -->
+    <g transform="translate(0, 520)">
+      <rect x="0" y="0" width="500" height="80" fill="#f9f9f9" rx="0 0 20 20"/>
+      <text x="250" y="30" font-family="'Segoe UI'" font-size="14" fill="#666" text-anchor="middle">
+        Все данные сохраняются автоматически в вашем браузере
+      </text>
+    </g>
+  </g>
+  
+  <!-- Текст для скриншота -->
+  <text x="640" y="670" font-family="'Segoe UI'" font-size="24" fill="white" text-anchor="middle" font-weight="bold">
+    To-Do List - Управляйте задачами эффективно
+  </text>
+  <text x="640" y="700" font-family="'Segoe UI'" font-size="18" fill="rgba(255,255,255,0.9)" text-anchor="middle">
+    Офлайн доступ • Экспорт данных • Кроссплатформенность
+  </text>
+</svg>
