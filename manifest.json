@@ -8,58 +8,59 @@
   "theme_color": "#6a11cb",
   "orientation": "portrait",
   "scope": "/todo-list-pwa/",
+  "id": "/todo-list-pwa/",
   "icons": [
     {
-      "src": "icons/icon-72x72.svg",
+      "src": "/todo-list-pwa/icons/icon-72x72.svg",
       "sizes": "72x72",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-96x96.svg",
+      "src": "/todo-list-pwa/icons/icon-96x96.svg",
       "sizes": "96x96",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-128x128.svg",
+      "src": "/todo-list-pwa/icons/icon-128x128.svg",
       "sizes": "128x128",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-144x144.svg",
+      "src": "/todo-list-pwa/icons/icon-144x144.svg",
       "sizes": "144x144",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-152x152.svg",
+      "src": "/todo-list-pwa/icons/icon-152x152.svg",
       "sizes": "152x152",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-192x192.svg",
+      "src": "/todo-list-pwa/icons/icon-192x192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "icons/icon-384x384.svg",
+      "src": "/todo-list-pwa/icons/icon-384x384.svg",
       "sizes": "384x384",
       "type": "image/svg+xml"
     },
     {
-      "src": "icons/icon-512x512.svg",
+      "src": "/todo-list-pwa/icons/icon-512x512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
     }
   ],
   "screenshots": [
     {
-      "src": "screenshots/screenshot1.svg",
+      "src": "/todo-list-pwa/screenshots/screenshot1.svg",
       "sizes": "1280x720",
       "type": "image/svg+xml",
       "form_factor": "wide"
     },
     {
-      "src": "screenshots/screenshot2.svg",
+      "src": "/todo-list-pwa/screenshots/screenshot2.svg",
       "sizes": "750x1334",
       "type": "image/svg+xml"
     }
@@ -70,15 +71,23 @@
       "name": "Новая задача",
       "short_name": "Добавить",
       "description": "Добавить новую задачу",
-      "url": "/?new=true",
-      "icons": [{ "src": "icons/add-icon.svg", "sizes": "96x96" }]
+      "url": "/todo-list-pwa/?new=true",
+      "icons": [{ 
+        "src": "/todo-list-pwa/icons/add-icon.svg", 
+        "sizes": "96x96",
+        "type": "image/svg+xml"
+      }]
     },
     {
       "name": "Активные задачи",
       "short_name": "Активные",
       "description": "Показать активные задачи",
-      "url": "/?filter=active",
-      "icons": [{ "src": "icons/active-icon.svg", "sizes": "96x96" }]
+      "url": "/todo-list-pwa/?filter=active",
+      "icons": [{ 
+        "src": "/todo-list-pwa/icons/active-icon.svg", 
+        "sizes": "96x96",
+        "type": "image/svg+xml"
+      }]
     }
   ]
 }

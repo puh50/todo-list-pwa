@@ -1,13 +1,15 @@
 // Конфигурация кэша
-const CACHE_NAME = 'todo-app-v2.0';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = 'todo-app-v3.0';
+const OFFLINE_URL = '/todo-list-pwa/offline.html';
 const urlsToCache = [
-  '/todo-list-pwa/',                 // Главная страница с именем репозитория
-  '/todo-list-pwa/index.html',       // Альтернативный путь
+  '/todo-list-pwa/',
+  '/todo-list-pwa/index.html',
   '/todo-list-pwa/manifest.json',
-  '/todo-list-pwa/icons/icon-192.png',
-  '/todo-list-pwa/icons/icon-512.png'
-  // CDN ресурсы кэшируются динамически
+  '/todo-list-pwa/service-worker.js',
+  '/todo-list-pwa/icons/icon-192x192.svg',
+  '/todo-list-pwa/icons/icon-512x512.svg',
+  '/todo-list-pwa/icons/add-icon.svg',
+  '/todo-list-pwa/icons/active-icon.svg'
 ];
 
 // Установка Service Worker
@@ -18,10 +20,18 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('✅ Service Worker: Кэш открыт');
-        return cache.addAll(urlsToCache);
+        // Используем cache.add для каждого ресурса отдельно для лучшей обработки ошибок
+        return Promise.all(
+          urlsToCache.map(url => {
+            return cache.add(url).catch(error => {
+              console.warn(`⚠️ Не удалось закэшировать ${url}:`, error);
+              return Promise.resolve(); // Продолжаем несмотря на ошибки
+            });
+          })
+        );
       })
       .then(() => {
-        console.log('🎯 Service Worker: Все ресурсы закэшированы');
+        console.log('🎯 Service Worker: Ресурсы закэшированы');
         return self.skipWaiting();
       })
   );
@@ -56,44 +66,57 @@ self.addEventListener('fetch', event => {
   // Пропускаем chrome-extension запросы
   if (event.request.url.startsWith('chrome-extension://')) return;
   
+  // Для CDN ресурсов используем только кэш
+  if (event.request.url.includes('cdn.jsdelivr.net') || 
+      event.request.url.includes('unpkg.com')) {
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => response || fetch(event.request))
+    );
+    return;
+  }
+  
+  // Для остальных ресурсов: сначала сеть, потом кэш
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Клонируем ответ
-        const responseToCache = response.clone();
+        // Клонируем ответ для кэширования
+        const responseClone = response.clone();
         
-        // Кэшируем успешные ответы
-        if (response.status === 200) {
+        // Кэшируем только успешные ответы и локальные ресурсы
+        if (response.status === 200 && 
+            event.request.url.startsWith(self.location.origin)) {
           caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+            .then(cache => cache.put(event.request, responseClone))
+            .catch(error => console.warn('Не удалось добавить в кэш:', error));
         }
         
         return response;
       })
       .catch(error => {
-        console.log('🌐 Service Worker: Сеть недоступна, используем кэш', error);
+        console.log('🌐 Сеть недоступна, используем кэш:', error);
         
-        // Для навигационных запросов возвращаем кэшированную страницу
+        // Для навигационных запросов возвращаем главную страницу
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('/todo-list-pwa/')
+                 .then(response => response || caches.match('/todo-list-pwa/index.html'));
         }
         
         // Для остальных запросов ищем в кэше
-        return caches.match(event.request);
+        return caches.match(event.request)
+          .then(response => {
+            if (response) {
+              return response;
+            }
+            
+            // Если файл не найден в кэше и это SVG/изображение, возвращаем fallback
+            if (event.request.url.match(/\.(svg|png|jpg|jpeg|gif)$/)) {
+              return caches.match('/todo-list-pwa/icons/icon-192x192.svg');
+            }
+            
+            // Для других типов возвращаем null
+            return null;
+          });
       })
   );
 });
-
-// Фоновая синхронизация
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-data') {
-    event.waitUntil(syncData());
-  }
-});
-
-async function syncData() {
-  console.log('🔄 Service Worker: Фоновая синхронизация');
-  // Здесь можно добавить логику синхронизации данных
-}
