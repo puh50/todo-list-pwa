@@ -1,15 +1,14 @@
 // Конфигурация кэша
 const CACHE_NAME = 'todo-app-v3.0';
-const OFFLINE_URL = '/todo-list-pwa/offline.html';
 const urlsToCache = [
-  '/todo-list-pwa/',
-  '/todo-list-pwa/index.html',
-  '/todo-list-pwa/manifest.json',
-  '/todo-list-pwa/service-worker.js',
-  '/todo-list-pwa/icons/icon-192x192.svg',
-  '/todo-list-pwa/icons/icon-512x512.svg',
-  '/todo-list-pwa/icons/add-icon.svg',
-  '/todo-list-pwa/icons/active-icon.svg'
+  '.',
+  './index.html',
+  './manifest.json',
+  './service-worker.js',
+  './icons/icon-192x192.svg',
+  './icons/icon-512x512.svg',
+  './icons/add-icon.svg',
+  './icons/active-icon.svg'
 ];
 
 // Установка Service Worker
