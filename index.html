@@ -20,7 +20,7 @@
     <meta name="msapplication-config" content="browserconfig.xml">
     <link rel="icon" href="icons/favicon.svg">
     <link rel="apple-touch-icon"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACwSURBVHgBrdJBCoJAFIbhb4RgoY2rNkELdy5atA0XNbkQTyBhIATdfQdIBbcFbmfgO4o58H8sBBW4Ae+JZ/hgH4ahPGInMMBZqEc2Agc4CpuBlcAN5qImMBVY4C4cewwEZnAFvpM1S2A+08GR9mhGVgIrmI2axIPgPVMj1k3ULAGJh8qODgKSeBKc6BR8BCQxESzoFmwFJC4EC7oGWwGJC4EC7oGWwGJC8ESuoNAwJVgCf0HrP8DACa1ZbCPdHoDAAAAAElFTkSuQmCC">
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACwSURBVHgBrdJBCoJAFIbhb4RgoY2rNkELdy5atA0XNbkQTyBhIATdfQdIBbcFbmfgO4o58H8sBBW4Ae+JZ/hgH4ahPGInMMBZqEc2Agc4CpuBlcAN5qImMBVY4C4cewwEZnAFvpM1S2A+08GR9mhGVgIrmI2axIPgPVMj1k3ULAGJh8qODgKSeBKcqBz8BCQxESzoFmwFJC4EC7oGWwGJC4EC7oGWwGJC8ESuoNAwJVgCf0HrP8DACa1ZbCPdHoDAAAAAAElFTkSuQmCC">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -37,11 +37,23 @@
         function TodoApp() {
             const loadTodos = () => {
                 const savedTodos = localStorage.getItem('todos');
-                return savedTodos ? JSON.parse(savedTodos) : [];
+                if (savedTodos) {
+                    const todos = JSON.parse(savedTodos);
+                    return todos.map(todo => ({
+                        ...todo,
+                        subtasks: todo.subtasks || [],
+                        isExpanded: todo.isExpanded || false,
+                        completedAt: todo.completedAt || null,
+                        isEditing: false,
+                        editingText: todo.text
+                    }));
+                }
+                return [];
             };
 
             const [todos, setTodos] = useState(loadTodos);
             const [newTodo, setNewTodo] = useState('');
+            const [newSubtaskTexts, setNewSubtaskTexts] = useState({});
             const [filter, setFilter] = useState('all');
             const [showConfirm, setShowConfirm] = useState(false);
             const [confirmConfig, setConfirmConfig] = useState(null);
@@ -79,7 +91,8 @@
                 const dataToSave = {
                     todos: todos,
                     lastModified: new Date().toISOString(),
-                    version: '1.0'
+                    version: '2.0',
+                    format: 'todo-with-subtasks'
                 };
 
                 const dataStr = JSON.stringify(dataToSave, null, 2);
@@ -106,19 +119,47 @@
                 reader.onload = (e) => {
                     try {
                         const importedData = JSON.parse(e.target.result);
+                        let importedTodos = [];
 
                         if (importedData.todos && Array.isArray(importedData.todos)) {
-                            setTodos(importedData.todos);
+                            if (importedData.format === 'todo-with-subtasks' || importedData.version === '2.0') {
+                                importedTodos = importedData.todos;
+                            } else {
+                                importedTodos = importedData.todos.map(todo => ({
+                                    ...todo,
+                                    subtasks: [],
+                                    isExpanded: false,
+                                    completedAt: todo.completed ? new Date().toISOString() : null,
+                                    isEditing: false,
+                                    editingText: todo.text
+                                }));
+                                showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
+                            }
+                            
+                            setTodos(importedTodos);
                             const newOperation = { type: 'import', time: new Date().toISOString() };
                             setLastOperation(newOperation);
-                            showNotification(`Импортировано ${importedData.todos.length} задач из файла`);
+                            showNotification(`Импортировано ${importedTodos.length} задач из файла`);
+                        } else if (Array.isArray(importedData)) {
+                            importedTodos = importedData.map(todo => ({
+                                ...todo,
+                                subtasks: [],
+                                isExpanded: false,
+                                completedAt: todo.completed ? new Date().toISOString() : null,
+                                isEditing: false,
+                                editingText: todo.text
+                            }));
+                            setTodos(importedTodos);
+                            const newOperation = { type: 'import', time: new Date().toISOString() };
+                            setLastOperation(newOperation);
+                            showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
                         } else {
-                            showNotification('Неверный формат файла. Ожидается массив задач.');
+                            showNotification('Неверный формат файла');
                         }
 
-                        // Сбрасываем значение input
                         event.target.value = '';
                     } catch (error) {
+                        console.error('Ошибка импорта:', error);
                         showNotification('Ошибка при импорте файла. Проверьте формат.');
                     }
                 };
@@ -136,7 +177,12 @@
                     id: Date.now(),
                     text: newTodo.trim(),
                     completed: false,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    completedAt: null,
+                    subtasks: [],
+                    isExpanded: false,
+                    isEditing: false,
+                    editingText: newTodo.trim()
                 };
 
                 setTodos([todo, ...todos]);
@@ -144,15 +190,257 @@
                 showNotification('Задача добавлена');
             };
 
+            // Переключение отображения подзадач
+            const toggleTodoExpanded = (id) => {
+                setTodos(todos.map(todo => {
+                    if (todo.id === id) {
+                        return { ...todo, isExpanded: !todo.isExpanded };
+                    }
+                    return todo;
+                }));
+            };
+
+            // Добавление подзадачи
+            const addSubtask = (todoId) => {
+                const subtaskText = newSubtaskTexts[todoId] || '';
+                if (subtaskText.trim() === '') {
+                    showNotification('Введите текст подзадачи');
+                    return;
+                }
+
+                const newSubtask = {
+                    id: Date.now() + Math.random(),
+                    text: subtaskText.trim(),
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    isEditing: false,
+                    editingText: subtaskText.trim()
+                };
+
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: [...todo.subtasks, newSubtask],
+                            isExpanded: true
+                        };
+                    }
+                    return todo;
+                }));
+
+                setNewSubtaskTexts({
+                    ...newSubtaskTexts,
+                    [todoId]: ''
+                });
+
+                showNotification('Подзадача добавлена');
+            };
+
+            // Удаление подзадачи
+            const deleteSubtask = (todoId, subtaskId) => {
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: todo.subtasks.filter(subtask => subtask.id !== subtaskId)
+                        };
+                    }
+                    return todo;
+                }));
+                showNotification('Подзадача удалена');
+            };
+
+            // Переключение статуса подзадачи
+            const toggleSubtaskComplete = (todoId, subtaskId) => {
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: todo.subtasks.map(subtask => {
+                                if (subtask.id === subtaskId) {
+                                    return { ...subtask, completed: !subtask.completed };
+                                }
+                                return subtask;
+                            })
+                        };
+                    }
+                    return todo;
+                }));
+            };
+
+            // Начало редактирования задачи
+            const startEditTodo = (id, text) => {
+                setTodos(todos.map(todo => {
+                    if (todo.id === id) {
+                        return { ...todo, isEditing: true, editingText: text };
+                    }
+                    return todo;
+                }));
+            };
+
+            // Сохранение редактирования задачи
+            const saveEditTodo = (id, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                const todo = todos.find(t => t.id === id);
+                if (!todo) return;
+                
+                const trimmedText = todo.editingText.trim();
+                if (trimmedText === '') {
+                    showNotification('Текст задачи не может быть пустым');
+                    return;
+                }
+
+                setTodos(todos.map(todo => {
+                    if (todo.id === id) {
+                        return { 
+                            ...todo, 
+                            text: trimmedText,
+                            isEditing: false,
+                            editingText: trimmedText
+                        };
+                    }
+                    return todo;
+                }));
+                showNotification('Задача обновлена');
+            };
+
+            // Отмена редактирования задачи
+            const cancelEditTodo = (id, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                setTodos(todos.map(todo => {
+                    if (todo.id === id) {
+                        return { ...todo, isEditing: false };
+                    }
+                    return todo;
+                }));
+            };
+
+            // Начало редактирования подзадачи
+            const startEditSubtask = (todoId, subtaskId, text) => {
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: todo.subtasks.map(subtask => {
+                                if (subtask.id === subtaskId) {
+                                    return { ...subtask, isEditing: true, editingText: text };
+                                }
+                                return subtask;
+                            })
+                        };
+                    }
+                    return todo;
+                }));
+            };
+
+            // Сохранение редактирования подзадачи
+            const saveEditSubtask = (todoId, subtaskId, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                const todo = todos.find(t => t.id === todoId);
+                if (!todo) return;
+
+                const subtask = todo.subtasks.find(s => s.id === subtaskId);
+                if (!subtask) return;
+                
+                const trimmedText = subtask.editingText.trim();
+                if (trimmedText === '') {
+                    showNotification('Текст подзадачи не может быть пустым');
+                    return;
+                }
+
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: todo.subtasks.map(subtask => {
+                                if (subtask.id === subtaskId) {
+                                    return { 
+                                        ...subtask, 
+                                        text: trimmedText,
+                                        isEditing: false,
+                                        editingText: trimmedText
+                                    };
+                                }
+                                return subtask;
+                            })
+                        };
+                    }
+                    return todo;
+                }));
+                showNotification('Подзадача обновлена');
+            };
+
+            // Отмена редактирования подзадачи
+            const cancelEditSubtask = (todoId, subtaskId, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                setTodos(todos.map(todo => {
+                    if (todo.id === todoId) {
+                        return {
+                            ...todo,
+                            subtasks: todo.subtasks.map(subtask => {
+                                if (subtask.id === subtaskId) {
+                                    return { ...subtask, isEditing: false };
+                                }
+                                return subtask;
+                            })
+                        };
+                    }
+                    return todo;
+                }));
+            };
+
             // Запрос на удаление задачи
-            const requestDeleteTodo = (id, text) => {
+            const requestDeleteTodo = (id, text, subtaskCount, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                const message = subtaskCount > 0 
+                    ? `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" с ${subtaskCount} подзадачами?`
+                    : `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`;
+
                 setConfirmConfig({
                     type: 'delete',
                     title: 'Подтвердите удаление',
-                    message: `Вы уверены, что хотите удалить задачу "${text.length > 50 ? text.substring(0, 50) + '...' : text}"?`,
+                    message: message,
                     onConfirm: () => {
                         setTodos(todos.filter(todo => todo.id !== id));
                         showNotification(`Задача "${text.substring(0, 20)}${text.length > 20 ? '...' : ''}" удалена`);
+                    }
+                });
+                setShowConfirm(true);
+            };
+
+            // Запрос на удаление подзадачи
+            const requestDeleteSubtask = (todoId, subtaskId, text, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                
+                setConfirmConfig({
+                    type: 'delete',
+                    title: 'Удалить подзадачу',
+                    message: `Вы уверены, что хотите удалить подзадачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`,
+                    onConfirm: () => {
+                        deleteSubtask(todoId, subtaskId);
                     }
                 });
                 setShowConfirm(true);
@@ -188,7 +476,11 @@
             const toggleComplete = (id) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
-                        const updatedTodo = { ...todo, completed: !todo.completed };
+                        const updatedTodo = { 
+                            ...todo, 
+                            completed: !todo.completed,
+                            completedAt: todo.completed ? null : new Date().toISOString()
+                        };
                         if (updatedTodo.completed) {
                             showNotification('Задача выполнена!');
                         }
@@ -202,17 +494,56 @@
             const filteredTodos = todos.filter(todo => {
                 if (filter === 'active') return !todo.completed;
                 if (filter === 'completed') return todo.completed;
-                return true; // all
+                return true;
             });
 
             // Статистика
             const completedCount = todos.filter(todo => todo.completed).length;
             const activeCount = todos.length - completedCount;
 
-            // Обработка нажатия клавиши Enter
+            // Получение статистики по подзадачам для конкретной задачи
+            const getSubtaskStats = (todo) => {
+                if (!todo.subtasks || todo.subtasks.length === 0) return null;
+                
+                const completed = todo.subtasks.filter(subtask => subtask.completed).length;
+                const total = todo.subtasks.length;
+                
+                return {
+                    completed,
+                    remaining: total - completed,
+                    total
+                };
+            };
+
+            // Обработка нажатия клавиши Enter для задачи
             const handleKeyPress = (e) => {
                 if (e.key === 'Enter') {
                     addTodo();
+                }
+            };
+
+            // Обработка нажатия клавиши Enter для подзадачи
+            const handleSubtaskKeyPress = (e, todoId) => {
+                if (e.key === 'Enter') {
+                    addSubtask(todoId);
+                }
+            };
+
+            // Обработка нажатия клавиши для редактирования задачи
+            const handleEditTodoKeyPress = (e, id) => {
+                if (e.key === 'Enter') {
+                    saveEditTodo(id, e);
+                } else if (e.key === 'Escape') {
+                    cancelEditTodo(id, e);
+                }
+            };
+
+            // Обработка нажатия клавиши для редактирования подзадачи
+            const handleEditSubtaskKeyPress = (e, todoId, subtaskId) => {
+                if (e.key === 'Enter') {
+                    saveEditSubtask(todoId, subtaskId, e);
+                } else if (e.key === 'Escape') {
+                    cancelEditSubtask(todoId, subtaskId, e);
                 }
             };
 
@@ -269,7 +600,7 @@
 
                         <div className="header-content">
                             <h1><i className="fas fa-tasks"></i> To-Do List</h1>
-                            <p>Приложение для управления задачами</p>
+                            <p>Приложение для управления задачами и подзадачами</p>
                         </div>
                     </div>
 
@@ -362,28 +693,232 @@
                                         : 'Нет выполненных задач'}</p>
                             </div>
                         ) : (
-                            filteredTodos.map(todo => (
-                                <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-                                    <input
-                                        type="checkbox"
-                                        className="todo-checkbox"
-                                        checked={todo.completed}
-                                        onChange={() => toggleComplete(todo.id)}
-                                    />
-                                    <div className="todo-text">
-                                        <div>{todo.text}</div>
-                                        <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
-                                            <i className="far fa-calendar-alt"></i> {formatDate(todo.createdAt)}
+                            filteredTodos.map(todo => {
+                                const subtaskStats = getSubtaskStats(todo);
+                                
+                                return (
+                                    <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
+                                        <div className="todo-main">
+                                            <div className="todo-left">
+                                                <input
+                                                    type="checkbox"
+                                                    className="todo-checkbox"
+                                                    checked={todo.completed}
+                                                    onChange={() => toggleComplete(todo.id)}
+                                                />
+                                                <div 
+                                                    className="todo-expand" 
+                                                    onClick={() => toggleTodoExpanded(todo.id)}
+                                                    title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
+                                                >
+                                                    <i className={`fas fa-chevron-${todo.isExpanded ? 'up' : 'down'}`}></i>
+                                                </div>
+                                                <div className="todo-text">
+                                                    {todo.isEditing ? (
+                                                        <div className="todo-edit-form">
+                                                            <input
+                                                                type="text"
+                                                                className="todo-edit-input"
+                                                                value={todo.editingText}
+                                                                onChange={(e) => setTodos(todos.map(t => 
+                                                                    t.id === todo.id ? {...t, editingText: e.target.value} : t
+                                                                ))}
+                                                                onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div 
+                                                            className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`}
+                                                            onDoubleClick={() => startEditTodo(todo.id, todo.text)}
+                                                        >
+                                                            {todo.text}
+                                                        </div>
+                                                    )}
+                                                    <div className="todo-meta">
+                                                        <span className="todo-date">
+                                                            <i className="far fa-calendar-alt"></i> 
+                                                            {todo.completed && todo.completedAt ? (
+                                                                <span>
+                                                                    {formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}
+                                                                </span>
+                                                            ) : (
+                                                                <span>{formatDate(todo.createdAt)}</span>
+                                                            )}
+                                                        </span>
+                                                        {todo.subtasks.length > 0 && subtaskStats && (
+                                                            <span className="subtask-stats">
+                                                                <i className="fas fa-list"></i>
+                                                                <span className="subtask-count">
+                                                                    {subtaskStats.completed} из {subtaskStats.total} выполнено
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="todo-actions">
+                                                {todo.isEditing ? (
+                                                    <>
+                                                        <button
+                                                            className="edit-button"
+                                                            onClick={(e) => saveEditTodo(todo.id, e)}
+                                                            title="Сохранить"
+                                                        >
+                                                            <i className="fas fa-check"></i>
+                                                        </button>
+                                                        <button
+                                                            className="edit-cancel-button"
+                                                            onClick={(e) => cancelEditTodo(todo.id, e)}
+                                                            title="Отменить редактирование"
+                                                        >
+                                                            <i className="fas fa-times"></i>
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            className="edit-button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                startEditTodo(todo.id, todo.text);
+                                                            }}
+                                                            title="Редактировать"
+                                                        >
+                                                            <i className="fas fa-edit"></i>
+                                                        </button>
+                                                        <button
+                                                            className="delete-button"
+                                                            onClick={(e) => requestDeleteTodo(todo.id, todo.text, todo.subtasks.length, e)}
+                                                            title="Удалить задачу"
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
+                                        
+                                        {/* Подзадачи (аккордеон) */}
+                                        {todo.isExpanded && (
+                                            <div className="subtasks-accordion">
+                                                <div className="subtasks-content">
+                                                    {todo.subtasks.length > 0 ? (
+                                                        <div className="subtasks-list">
+                                                            {todo.subtasks.map(subtask => (
+                                                                <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''}`}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="subtask-checkbox"
+                                                                        checked={subtask.completed}
+                                                                        onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
+                                                                    />
+                                                                    {subtask.isEditing ? (
+                                                                        <div className="subtask-edit-form">
+                                                                            <input
+                                                                                type="text"
+                                                                                className="subtask-edit-input"
+                                                                                value={subtask.editingText}
+                                                                                onChange={(e) => setTodos(todos.map(t => {
+                                                                                    if (t.id === todo.id) {
+                                                                                        return {
+                                                                                            ...t,
+                                                                                            subtasks: t.subtasks.map(s => 
+                                                                                                s.id === subtask.id ? {...s, editingText: e.target.value} : s
+                                                                                            )
+                                                                                        };
+                                                                                    }
+                                                                                    return t;
+                                                                                }))}
+                                                                                onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
+                                                                                autoFocus
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div 
+                                                                            className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
+                                                                            onDoubleClick={() => startEditSubtask(todo.id, subtask.id, subtask.text)}
+                                                                        >
+                                                                            {subtask.text}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="subtask-actions">
+                                                                        {subtask.isEditing ? (
+                                                                            <>
+                                                                                <button
+                                                                                    className="edit-subtask-button"
+                                                                                    onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
+                                                                                    title="Сохранить"
+                                                                                >
+                                                                                    <i className="fas fa-check"></i>
+                                                                                </button>
+                                                                                <button
+                                                                                    className="edit-cancel-subtask-button"
+                                                                                    onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
+                                                                                    title="Отменить редактирование"
+                                                                                >
+                                                                                    <i className="fas fa-times"></i>
+                                                                                </button>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <button
+                                                                                    className="edit-subtask-button"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        startEditSubtask(todo.id, subtask.id, subtask.text);
+                                                                                    }}
+                                                                                    title="Редактировать"
+                                                                                >
+                                                                                    <i className="fas fa-edit"></i>
+                                                                                </button>
+                                                                                <button
+                                                                                    className="delete-subtask-button"
+                                                                                    onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                    title="Удалить подзадачу"
+                                                                                >
+                                                                                    <i className="fas fa-times"></i>
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="no-subtasks">
+                                                            <i className="fas fa-inbox"></i>
+                                                            <span>Нет подзадач</span>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Добавление новой подзадачи */}
+                                                    <div className="add-subtask-form">
+                                                        <input
+                                                            type="text"
+                                                            className="subtask-input"
+                                                            placeholder="Добавить подзадачу..."
+                                                            value={newSubtaskTexts[todo.id] || ''}
+                                                            onChange={(e) => setNewSubtaskTexts({
+                                                                ...newSubtaskTexts,
+                                                                [todo.id]: e.target.value
+                                                            })}
+                                                            onKeyPress={(e) => handleSubtaskKeyPress(e, todo.id)}
+                                                        />
+                                                        <button 
+                                                            className="add-subtask-button"
+                                                            onClick={() => addSubtask(todo.id)}
+                                                            title="Добавить подзадачу"
+                                                        >
+                                                            <i className="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <button
-                                        className="delete-button"
-                                        onClick={() => requestDeleteTodo(todo.id, todo.text)}
-                                    >
-                                        <i className="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
 
@@ -391,7 +926,9 @@
                         <p><strong>Информация:</strong></p>
                         <p>• Все данные сохраняются автоматически в вашем браузере</p>
                         <p>• Используйте экспорт для резервного копирования задач</p>
-                        <p>• Время последней операции отображается в правом верхнем углу</p>
+                        <p>• Поддерживается импорт как старых, так и новых форматов файлов</p>
+                        <p>• Нажмите на стрелку рядом с задачей, чтобы увидеть подзадачи</p>
+                        <p>• Двойной клик по задаче или подзадаче для редактирования</p>
                     </div>
 
                     {/* Универсальное окно подтверждения */}
@@ -442,46 +979,36 @@
         // === PWA УСТАНОВКА ===
         let deferredPrompt = null;
         let installButton = null;
-        let appInstalled = false; // Флаг установки приложения
+        let appInstalled = false;
 
-        // Проверка, является ли iOS Safari
         function isIOS() {
             return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         }
 
-        // Проверка, является ли Safari
         function isSafari() {
             return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         }
 
-        // Проверка, открыто ли приложение в standalone режиме (уже установлено и запущено как PWA)
         function isStandalone() {
             return window.matchMedia('(display-mode: standalone)').matches ||
                 window.navigator.standalone === true;
         }
 
-        // Проверка, установлено ли приложение (даже если открыто в браузере)
         function isAppInstalled() {
-            // Проверяем флаг установки, который устанавливается при событии appinstalled
             return appInstalled || localStorage.getItem('pwaInstalled') === 'true';
         }
 
-        // Проверка, можно ли установить PWA (критерии браузера)
         function canInstallPWA() {
             return 'BeforeInstallPromptEvent' in window;
         }
 
-        // Открыть установленное приложение
         function openInstalledApp() {
             console.log('Пытаемся открыть установленное приложение');
 
-            // Для Android/Chrome можно попробовать открыть через intent
             if (navigator.userAgent.includes('Android') || navigator.userAgent.includes('Chrome')) {
-                // Пытаемся открыть через deep link
                 const currentUrl = window.location.href;
                 const appUrl = currentUrl.replace(/^https?:\/\//, 'todoapp://');
 
-                // Создаем iframe для попытки открытия приложения
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 iframe.src = appUrl;
@@ -489,30 +1016,24 @@
 
                 setTimeout(() => {
                     document.body.removeChild(iframe);
-                    // Если не открылось за 500мс, показываем инструкции
                     showNotification('Не удалось открыть приложение. Откройте его вручную.');
                     showOpenAppInstructions();
                 }, 500);
             } else {
-                // Для других платформ показываем инструкции
                 showOpenAppInstructions();
             }
         }
 
-        // Создание кнопки установки/открытия
         function createInstallButton() {
-            // Удаляем старую кнопку, если есть
             if (installButton && document.body.contains(installButton)) {
                 document.body.removeChild(installButton);
             }
 
-            // Если приложение уже запущено в standalone режиме - не создаем кнопку
             if (isStandalone()) {
                 console.log('Приложение уже запущено в standalone режиме - кнопка не нужна');
                 return;
             }
 
-            // Проверяем платформу
             const isIOSDevice = isIOS();
             const isSafariBrowser = isSafari();
 
@@ -520,22 +1041,17 @@
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
 
-            // Проверяем, установлено ли приложение
             if (isAppInstalled()) {
-                // Приложение установлено, но открыто в браузере
                 installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> Открыть в приложении';
                 installButton.classList.add('open-app-button');
                 installButton.onclick = openInstalledApp;
             } else if (isIOSDevice && isSafariBrowser) {
-                // iOS Safari - предлагаем добавить на главный экран
                 installButton.innerHTML = '<i class="fas fa-plus-circle"></i> Добавить на главный экран';
                 installButton.onclick = showIOSInstallInstructions;
             } else if (canInstallPWA() && deferredPrompt) {
-                // Android/Desktop браузеры, поддерживающие установку
                 installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
                 installButton.onclick = installPWA;
             } else {
-                // Браузеры, где установка через меню
                 installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
                 installButton.onclick = showInstallInstructions;
             }
@@ -544,7 +1060,6 @@
             console.log('Кнопка создана: установлено =', isAppInstalled());
         }
 
-        // Установка PWA (для поддерживающих браузеров)
         async function installPWA() {
             if (!deferredPrompt) {
                 showNotification('Установка пока недоступна. Попробуйте через меню браузера.');
@@ -556,20 +1071,15 @@
             installButton.disabled = true;
 
             try {
-                // Показываем диалог установки
                 deferredPrompt.prompt();
-
-                // Ждем ответа пользователя
                 const { outcome } = await deferredPrompt.userChoice;
 
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
                     showNotification('Приложение устанавливается...');
-                    // Флаг установки будет установлен при событии appinstalled
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
-                    // Восстанавливаем кнопку
                     setTimeout(() => {
                         createInstallButton();
                     }, 2000);
@@ -584,7 +1094,6 @@
             }
         }
 
-        // Показать инструкции для iOS
         function showIOSInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
@@ -618,12 +1127,10 @@
 
             document.body.appendChild(modal);
 
-            // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
 
-            // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     document.body.removeChild(modal);
@@ -631,7 +1138,6 @@
             });
         }
 
-        // Показать инструкции по открытию приложения
         function showOpenAppInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
@@ -649,7 +1155,7 @@
             } else if (browser === 'firefox') {
                 instructions = `
                     <p><strong>Чтобы открыть в установленном приложении:</strong></p>
-                    <p>1. Нажмите <strong>☰</strong> (меню)</p>
+                    <p>1. Нажмите <strong>☰</strong> (menù)</p>
                     <p>2. Выберите <strong>"Открыть в приложении"</strong></p>
                     <p>Или откройте приложение с главного экрана вашего устройства.</p>
                 `;
@@ -693,12 +1199,10 @@
 
             document.body.appendChild(modal);
 
-            // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
 
-            // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     document.body.removeChild(modal);
@@ -706,7 +1210,6 @@
             });
         }
 
-        // Показать инструкции по установке
         function showInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
@@ -762,12 +1265,10 @@
 
             document.body.appendChild(modal);
 
-            // Закрытие модального окна
             modal.querySelector('#closeInstallModal').addEventListener('click', () => {
                 document.body.removeChild(modal);
             });
 
-            // Закрытие по клику на фон
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     document.body.removeChild(modal);
@@ -775,7 +1276,6 @@
             });
         }
 
-        // Определение браузера
         function detectBrowser() {
             const userAgent = navigator.userAgent.toLowerCase();
             if (userAgent.includes('chrome') && !userAgent.includes('edg')) return 'chrome';
@@ -785,7 +1285,6 @@
             return 'other';
         }
 
-        // Функция показа уведомления
         function showNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'notification';
@@ -802,57 +1301,42 @@
 
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
 
-        // Событие beforeinstallprompt (поддерживается Chrome, Edge, Opera)
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('🎯 beforeinstallprompt сработал');
-
-            // Предотвращаем автоматический показ
             e.preventDefault();
-
-            // Сохраняем событие для использования позже
             deferredPrompt = e;
 
-            // Создаем кнопку установки
             if (!isStandalone()) {
                 createInstallButton();
             }
         });
 
-        // Событие успешной установки
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA успешно установлено!');
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
 
-            // Обновляем кнопку (теперь она должна стать "Открыть в приложении")
             if (!isStandalone()) {
                 createInstallButton();
             }
 
-            // Очищаем deferredPrompt
             deferredPrompt = null;
-
-            // Показываем уведомление
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
 
-        // Регистрация Service Worker
         window.addEventListener('load', () => {
             console.log('Загрузка страницы завершена');
 
-            // Проверяем, не запущено ли уже в standalone
             if (isStandalone()) {
                 console.log('Приложение запущено в standalone режиме');
                 return;
             }
 
-            // Регистрируем Service Worker
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker зарегистрирован:', registration.scope);
 
-                        // Если beforeinstallprompt не сработал сразу, создаем кнопку через 2 секунды
                         setTimeout(() => {
                             if (!installButton && !isStandalone()) {
                                 createInstallButton();
@@ -861,21 +1345,18 @@
                     })
                     .catch(error => {
                         console.log('❌ Ошибка регистрации Service Worker:', error);
-                        // Все равно создаем кнопку для ручной установки
                         if (!installButton && !isStandalone()) {
                             createInstallButton();
                         }
                     });
             } else {
                 console.log('Service Worker не поддерживается');
-                // Создаем кнопку для ручной установки
                 if (!installButton && !isStandalone()) {
                     createInstallButton();
                 }
             }
         });
 
-        // Обновление статуса онлайн/офлайн
         function updateOnlineStatus() {
             const statusElement = document.querySelector('.sync-status');
             if (statusElement) {
@@ -894,18 +1375,15 @@
         window.addEventListener('online', updateOnlineStatus);
         window.addEventListener('offline', updateOnlineStatus);
 
-        // Инициализация при загрузке DOM
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM загружен');
             updateOnlineStatus();
 
-            // Запрос разрешения на уведомления
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
         });
 
-        // Периодическая проверка, не изменился ли режим
         setInterval(() => {
             if (isStandalone() && installButton && document.body.contains(installButton)) {
                 console.log('Обнаружен переход в standalone режим - скрываем кнопку');
