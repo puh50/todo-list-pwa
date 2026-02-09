@@ -534,6 +534,7 @@ body {
 
     .filter-button {
         font-size: 12px;
+        padding: 20px 10px;
     }
 
     .confirm-content {
