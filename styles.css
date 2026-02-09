@@ -291,8 +291,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-top: 15px;
-    padding: 0 20px;
+    padding: 20px;
     flex-wrap: wrap;
 }
 
