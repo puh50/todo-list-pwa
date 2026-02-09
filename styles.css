@@ -1098,12 +1098,10 @@ body {
     }
     
     .todo-menu-dropdown {
-        right: -50px;
-        min-width: 140px;
+        min-width: 130px;
     }
     
     .subtask-menu-dropdown {
-        right: -50px;
         min-width: 140px;
     }
 }
@@ -1124,12 +1122,10 @@ body {
     }
     
     .todo-menu-dropdown {
-        right: -60px;
         min-width: 130px;
     }
     
     .subtask-menu-dropdown {
-        right: -60px;
         min-width: 130px;
     }
 }
