@@ -532,6 +532,10 @@ body {
         flex-wrap: wrap;
     }
 
+    .filter-button {
+        font-size: 12px;
+    }
+
     .confirm-content {
         padding: 20px;
     }
