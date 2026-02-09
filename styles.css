@@ -141,7 +141,7 @@ body {
     padding: 10px;
     background: white;
     border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .stat-number {
@@ -757,6 +757,7 @@ body {
         max-height: 0;
         overflow: hidden;
     }
+
     to {
         opacity: 1;
         max-height: 1000px;
@@ -792,7 +793,7 @@ body {
 .subtask-item:hover {
     background: #e9ecef;
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .subtask-item.completed {
@@ -903,7 +904,7 @@ body {
 
 .subtask-input:focus {
     border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.15);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .15);
 }
 
 .add-subtask-button {
@@ -999,8 +1000,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .menu-item {
@@ -1088,18 +1096,18 @@ body {
 }
 
 .todo-item.expanded {
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
     .stats {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
     .todo-menu-dropdown {
         min-width: 130px;
     }
-    
+
     .subtask-menu-dropdown {
         min-width: 140px;
     }
@@ -1109,21 +1117,25 @@ body {
     .stats {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
+    .stat-label {
+        font-size: 12px;
+    }
+
     .todo-meta {
         flex-direction: column;
         align-items: flex-start;
         gap: 5px;
     }
-    
+
     .subtask-stats {
         margin-left: 0;
     }
-    
+
     .todo-menu-dropdown {
         min-width: 130px;
     }
-    
+
     .subtask-menu-dropdown {
         min-width: 130px;
     }
