@@ -499,6 +499,16 @@ body {
     z-index: 20001;
 }
 
+@media (max-width: 768px) {
+    .filter-buttons {
+        padding: 20px 10px;
+    }
+
+    .filter-button {
+        font-size: 12px;
+    }
+}
+
 @media (max-width: 500px) {
     body {
         padding: 10px;
@@ -527,8 +537,7 @@ body {
         width: 100%;
     }
 
-    .filter-buttons,
-    .cloud-buttons {
+    .filter-buttons {
         flex-wrap: wrap;
         padding: 20px 10px;
     }
