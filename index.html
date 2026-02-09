@@ -781,9 +781,10 @@
                             ) : (
                                 filteredTodos.map(todo => {
                                     const subtaskStats = getSubtaskStats(todo);
+                                    const isTodoMenuOpen = openMenuId === todo.id;
                                     
                                     return (
-                                        <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
+                                        <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}>
                                             <div className="todo-main">
                                                 <div className="todo-left">
                                                     <input
@@ -870,7 +871,7 @@
                                                             >
                                                                 <i className="fas fa-ellipsis-v"></i>
                                                             </button>
-                                                            {openMenuId === todo.id && (
+                                                            {isTodoMenuOpen && (
                                                                 <div 
                                                                     className="todo-menu-dropdown" 
                                                                     ref={getMenuRef('todo', todo.id)}
@@ -901,95 +902,98 @@
                                                     <div className="subtasks-content">
                                                         {todo.subtasks.length > 0 ? (
                                                             <div className="subtasks-list">
-                                                                {todo.subtasks.map(subtask => (
-                                                                    <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''}`}>
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            className="subtask-checkbox"
-                                                                            checked={subtask.completed}
-                                                                            onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
-                                                                        />
-                                                                        {subtask.isEditing ? (
-                                                                            <div className="subtask-edit-form">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    className="subtask-edit-input"
-                                                                                    value={subtask.editingText}
-                                                                                    onChange={(e) => setTodos(todos.map(t => {
-                                                                                        if (t.id === todo.id) {
-                                                                                            return {
-                                                                                                ...t,
-                                                                                                subtasks: t.subtasks.map(s => 
-                                                                                                    s.id === subtask.id ? {...s, editingText: e.target.value} : s
-                                                                                                )
-                                                                                            };
-                                                                                        }
-                                                                                        return t;
-                                                                                    }))}
-                                                                                    onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
-                                                                                    autoFocus
-                                                                                />
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div 
-                                                                                className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
-                                                                                onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                            >
-                                                                                {subtask.text}
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="subtask-actions">
+                                                                {todo.subtasks.map(subtask => {
+                                                                    const isSubtaskMenuOpen = openSubtaskMenuId === `${todo.id}-${subtask.id}`;
+                                                                    return (
+                                                                        <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}>
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="subtask-checkbox"
+                                                                                checked={subtask.completed}
+                                                                                onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
+                                                                            />
                                                                             {subtask.isEditing ? (
-                                                                                <>
-                                                                                    <button
-                                                                                        className="edit-subtask-button"
-                                                                                        onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
-                                                                                        title="Сохранить"
-                                                                                    >
-                                                                                        <i className="fas fa-check"></i>
-                                                                                    </button>
-                                                                                    <button
-                                                                                        className="edit-cancel-subtask-button"
-                                                                                        onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
-                                                                                        title="Отменить редактирование"
-                                                                                    >
-                                                                                        <i className="fas fa-times"></i>
-                                                                                    </button>
-                                                                                </>
+                                                                                <div className="subtask-edit-form">
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        className="subtask-edit-input"
+                                                                                        value={subtask.editingText}
+                                                                                        onChange={(e) => setTodos(todos.map(t => {
+                                                                                            if (t.id === todo.id) {
+                                                                                                return {
+                                                                                                    ...t,
+                                                                                                    subtasks: t.subtasks.map(s => 
+                                                                                                        s.id === subtask.id ? {...s, editingText: e.target.value} : s
+                                                                                                    )
+                                                                                                };
+                                                                                            }
+                                                                                            return t;
+                                                                                        }))}
+                                                                                        onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
+                                                                                        autoFocus
+                                                                                    />
+                                                                                </div>
                                                                             ) : (
-                                                                                <div className="subtask-menu-container">
-                                                                                    <button
-                                                                                        className="subtask-menu-button"
-                                                                                        onClick={(e) => toggleSubtaskMenu(todo.id, subtask.id, e)}
-                                                                                        title="Меню"
-                                                                                    >
-                                                                                        <i className="fas fa-ellipsis-v"></i>
-                                                                                    </button>
-                                                                                    {openSubtaskMenuId === `${todo.id}-${subtask.id}` && (
-                                                                                        <div 
-                                                                                            className="subtask-menu-dropdown" 
-                                                                                            ref={getMenuRef('subtask', `${todo.id}-${subtask.id}`)}
-                                                                                            onClick={(e) => e.stopPropagation()}
-                                                                                        >
-                                                                                            <button
-                                                                                                className="menu-item"
-                                                                                                onClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                            >
-                                                                                                <i className="fas fa-edit"></i> Редактировать
-                                                                                            </button>
-                                                                                            <button
-                                                                                                className="menu-item delete"
-                                                                                                onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                            >
-                                                                                                <i className="fas fa-trash"></i> Удалить
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    )}
+                                                                                <div 
+                                                                                    className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
+                                                                                    onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                >
+                                                                                    {subtask.text}
                                                                                 </div>
                                                                             )}
+                                                                            <div className="subtask-actions">
+                                                                                {subtask.isEditing ? (
+                                                                                    <>
+                                                                                        <button
+                                                                                            className="edit-subtask-button"
+                                                                                            onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
+                                                                                            title="Сохранить"
+                                                                                        >
+                                                                                            <i className="fas fa-check"></i>
+                                                                                        </button>
+                                                                                        <button
+                                                                                            className="edit-cancel-subtask-button"
+                                                                                            onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
+                                                                                            title="Отменить редактирование"
+                                                                                        >
+                                                                                            <i className="fas fa-times"></i>
+                                                                                        </button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <div className="subtask-menu-container">
+                                                                                        <button
+                                                                                            className="subtask-menu-button"
+                                                                                            onClick={(e) => toggleSubtaskMenu(todo.id, subtask.id, e)}
+                                                                                            title="Меню"
+                                                                                        >
+                                                                                            <i className="fas fa-ellipsis-v"></i>
+                                                                                        </button>
+                                                                                        {isSubtaskMenuOpen && (
+                                                                                            <div 
+                                                                                                className="subtask-menu-dropdown" 
+                                                                                                ref={getMenuRef('subtask', `${todo.id}-${subtask.id}`)}
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                            >
+                                                                                                <button
+                                                                                                    className="menu-item"
+                                                                                                    onClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                                >
+                                                                                                    <i className="fas fa-edit"></i> Редактировать
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    className="menu-item delete"
+                                                                                                    onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                                >
+                                                                                                    <i className="fas fa-trash"></i> Удалить
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                ))}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         ) : (
                                                             <div className="no-subtasks">
