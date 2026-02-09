@@ -1104,6 +1104,10 @@ body {
         grid-template-columns: repeat(3, 1fr);
     }
 
+    .stat-label {
+        font-size: 12px;
+    }
+
     .todo-menu-dropdown {
         min-width: 130px;
     }
