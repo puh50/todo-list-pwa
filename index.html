@@ -20,7 +20,7 @@
     <meta name="msapplication-config" content="browserconfig.xml">
     <link rel="icon" href="icons/favicon.svg">
     <link rel="apple-touch-icon"
-        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACwSURBVHgBrdJBCoJAFIbhb4RgoY2rNkELdy5atA0XNbkQTyBhIATdfQdIBbcFbmfgO4o58H8sBBW4Ae+JZ/hgH4ahPGInMMBZqEc2Agc4CpuBlcAN5qImMBVY4C4cewwEZnAFvpM1S2A+08GR9mhGVgIrmI2axIPgPVMj1k3ULAGJh8qODgKSeBKcqBz8BCQxESzoFmwFJC4EC7oGWwGJC4EC7oGWwGJC8ESuoNAwJVgCf0HrP8DACa1ZbCPdHoDAAAAAAElFTkSuQmCC">
+        href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAACwSURBVHgBrdJBCoJAFIbhb4RgoY2rNkELdy5atA0XNbkQTyBhIATdfQdIBbcFbmfgO4o58H8sBBW4Ae+JZ/hgH4ahPGInMMBZqEc2Agc4CpuBlcAN5qImMBVY4C4cewwEZhAXvhP5syy2A+28GR9qhGVgIrmI2axIPgPVMj1k3ULAGJh8qODgKSeBKcKBz8BCQxESzoFmwFJC4EC7oGWwGJC4EC7oGWwGJC8ESuoNAwJVgCf0HrP8DACa1ZbCPdHoDAAAAAAElFTkSuQmCC">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -32,7 +32,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         function TodoApp() {
             const loadTodos = () => {
@@ -45,7 +45,8 @@
                         isExpanded: todo.isExpanded || false,
                         completedAt: todo.completedAt || null,
                         isEditing: false,
-                        editingText: todo.text
+                        editingText: todo.text,
+                        isMenuOpen: false
                     }));
                 }
                 return [];
@@ -62,6 +63,9 @@
                 const saved = localStorage.getItem('lastOperation');
                 return saved ? JSON.parse(saved) : { type: 'save', time: new Date().toISOString() };
             });
+            const [openMenuId, setOpenMenuId] = useState(null);
+            const [openSubtaskMenuId, setOpenSubtaskMenuId] = useState(null);
+            const menuRefs = useRef({});
 
             // Сохранение задач в локальное хранилище при изменении
             useEffect(() => {
@@ -77,6 +81,46 @@
             useEffect(() => {
                 localStorage.setItem('lastOperation', JSON.stringify(lastOperation));
             }, [lastOperation]);
+
+            // Закрытие меню при клике вне его
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    // Проверяем, был ли клик вне любого меню
+                    let isOutside = true;
+                    
+                    // Проверяем основной меню
+                    if (openMenuId && menuRefs.current[`todo-${openMenuId}`]) {
+                        const menuElement = menuRefs.current[`todo-${openMenuId}`];
+                        if (menuElement && menuElement.contains(event.target)) {
+                            isOutside = false;
+                        }
+                    }
+                    
+                    // Проверяем меню подзадач
+                    if (openSubtaskMenuId && menuRefs.current[`subtask-${openSubtaskMenuId}`]) {
+                        const menuElement = menuRefs.current[`subtask-${openSubtaskMenuId}`];
+                        if (menuElement && menuElement.contains(event.target)) {
+                            isOutside = false;
+                        }
+                    }
+                    
+                    // Проверяем кнопки меню
+                    const menuButtons = document.querySelectorAll('.todo-menu-button, .subtask-menu-button');
+                    menuButtons.forEach(button => {
+                        if (button.contains(event.target)) {
+                            isOutside = false;
+                        }
+                    });
+                    
+                    if (isOutside) {
+                        setOpenMenuId(null);
+                        setOpenSubtaskMenuId(null);
+                    }
+                };
+
+                document.addEventListener('click', handleClickOutside);
+                return () => document.removeEventListener('click', handleClickOutside);
+            }, [openMenuId, openSubtaskMenuId]);
 
             // Показ уведомления
             const showNotification = (message) => {
@@ -131,7 +175,8 @@
                                     isExpanded: false,
                                     completedAt: todo.completed ? new Date().toISOString() : null,
                                     isEditing: false,
-                                    editingText: todo.text
+                                    editingText: todo.text,
+                                    isMenuOpen: false
                                 }));
                                 showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
                             }
@@ -147,7 +192,8 @@
                                 isExpanded: false,
                                 completedAt: todo.completed ? new Date().toISOString() : null,
                                 isEditing: false,
-                                editingText: todo.text
+                                editingText: todo.text,
+                                isMenuOpen: false
                             }));
                             setTodos(importedTodos);
                             const newOperation = { type: 'import', time: new Date().toISOString() };
@@ -182,7 +228,8 @@
                     subtasks: [],
                     isExpanded: false,
                     isEditing: false,
-                    editingText: newTodo.trim()
+                    editingText: newTodo.trim(),
+                    isMenuOpen: false
                 };
 
                 setTodos([todo, ...todos]);
@@ -191,7 +238,8 @@
             };
 
             // Переключение отображения подзадач
-            const toggleTodoExpanded = (id) => {
+            const toggleTodoExpanded = (id, e) => {
+                if (e) e.stopPropagation();
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
                         return { ...todo, isExpanded: !todo.isExpanded };
@@ -214,7 +262,8 @@
                     completed: false,
                     createdAt: new Date().toISOString(),
                     isEditing: false,
-                    editingText: subtaskText.trim()
+                    editingText: subtaskText.trim(),
+                    isMenuOpen: false
                 };
 
                 setTodos(todos.map(todo => {
@@ -269,7 +318,12 @@
             };
 
             // Начало редактирования задачи
-            const startEditTodo = (id, text) => {
+            const startEditTodo = (id, text, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                setOpenMenuId(null);
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
                         return { ...todo, isEditing: true, editingText: text };
@@ -324,7 +378,12 @@
             };
 
             // Начало редактирования подзадачи
-            const startEditSubtask = (todoId, subtaskId, text) => {
+            const startEditSubtask = (todoId, subtaskId, text, e) => {
+                if (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                setOpenSubtaskMenuId(null);
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
                         return {
@@ -412,6 +471,7 @@
                     e.preventDefault();
                 }
                 
+                setOpenMenuId(null);
                 const message = subtaskCount > 0 
                     ? `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" с ${subtaskCount} подзадачами?`
                     : `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`;
@@ -435,6 +495,7 @@
                     e.preventDefault();
                 }
                 
+                setOpenSubtaskMenuId(null);
                 setConfirmConfig({
                     type: 'delete',
                     title: 'Удалить подзадачу',
@@ -488,6 +549,30 @@
                     }
                     return todo;
                 }));
+            };
+
+            // Открытие/закрытие меню задачи
+            const toggleTodoMenu = (id, e) => {
+                if (e) e.stopPropagation();
+                setOpenMenuId(openMenuId === id ? null : id);
+                setOpenSubtaskMenuId(null);
+            };
+
+            // Открытие/закрытие меню подзадачи
+            const toggleSubtaskMenu = (todoId, subtaskId, e) => {
+                if (e) e.stopPropagation();
+                const menuId = `${todoId}-${subtaskId}`;
+                setOpenSubtaskMenuId(openSubtaskMenuId === menuId ? null : menuId);
+                setOpenMenuId(null);
+            };
+
+            // Получение ref для меню
+            const getMenuRef = (type, id) => (ref) => {
+                if (ref) {
+                    menuRefs.current[`${type}-${id}`] = ref;
+                } else {
+                    delete menuRefs.current[`${type}-${id}`];
+                }
             };
 
             // Фильтрация задач
@@ -681,245 +766,271 @@
                         </button>
                     </div>
 
-                    <div className="todo-list">
-                        {filteredTodos.length === 0 ? (
-                            <div className="empty-state">
-                                <i className="fas fa-clipboard-list"></i>
-                                <h3>Список пуст</h3>
-                                <p>{filter === 'all'
-                                    ? 'Добавьте свою первую задачу!'
-                                    : filter === 'active'
-                                        ? 'Нет активных задач'
-                                        : 'Нет выполненных задач'}</p>
-                            </div>
-                        ) : (
-                            filteredTodos.map(todo => {
-                                const subtaskStats = getSubtaskStats(todo);
-                                
-                                return (
-                                    <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''}`}>
-                                        <div className="todo-main">
-                                            <div className="todo-left">
-                                                <input
-                                                    type="checkbox"
-                                                    className="todo-checkbox"
-                                                    checked={todo.completed}
-                                                    onChange={() => toggleComplete(todo.id)}
-                                                />
-                                                <div 
-                                                    className="todo-expand" 
-                                                    onClick={() => toggleTodoExpanded(todo.id)}
-                                                    title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
-                                                >
-                                                    <i className={`fas fa-chevron-${todo.isExpanded ? 'up' : 'down'}`}></i>
+                    <div className="todo-list-container">
+                        <div className="todo-list">
+                            {filteredTodos.length === 0 ? (
+                                <div className="empty-state">
+                                    <i className="fas fa-clipboard-list"></i>
+                                    <h3>Список пуст</h3>
+                                    <p>{filter === 'all'
+                                        ? 'Добавьте свою первую задачу!'
+                                        : filter === 'active'
+                                            ? 'Нет активных задач'
+                                            : 'Нет выполненных задач'}</p>
+                                </div>
+                            ) : (
+                                filteredTodos.map(todo => {
+                                    const subtaskStats = getSubtaskStats(todo);
+                                    const isTodoMenuOpen = openMenuId === todo.id;
+                                    
+                                    return (
+                                        <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}>
+                                            <div className="todo-main">
+                                                <div className="todo-left">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="todo-checkbox"
+                                                        checked={todo.completed}
+                                                        onChange={() => toggleComplete(todo.id)}
+                                                    />
+                                                    <div 
+                                                        className="todo-expand" 
+                                                        onClick={(e) => toggleTodoExpanded(todo.id, e)}
+                                                        title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
+                                                    >
+                                                        <i className={`fas fa-chevron-${todo.isExpanded ? 'up' : 'down'}`}></i>
+                                                    </div>
+                                                    <div className="todo-text">
+                                                        {todo.isEditing ? (
+                                                            <div className="todo-edit-form">
+                                                                <input
+                                                                    type="text"
+                                                                    className="todo-edit-input"
+                                                                    value={todo.editingText}
+                                                                    onChange={(e) => setTodos(todos.map(t => 
+                                                                        t.id === todo.id ? {...t, editingText: e.target.value} : t
+                                                                    ))}
+                                                                    onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
+                                                                    autoFocus
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div 
+                                                                className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`}
+                                                                onDoubleClick={(e) => startEditTodo(todo.id, todo.text, e)}
+                                                            >
+                                                                {todo.text}
+                                                            </div>
+                                                        )}
+                                                        <div className="todo-meta">
+                                                            <span className="todo-date">
+                                                                <i className="far fa-calendar-alt"></i> 
+                                                                {todo.completed && todo.completedAt ? (
+                                                                    <span>
+                                                                        {formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span>{formatDate(todo.createdAt)}</span>
+                                                                )}
+                                                            </span>
+                                                            {todo.subtasks.length > 0 && subtaskStats && (
+                                                                <span className="subtask-stats">
+                                                                    <i className="fas fa-list"></i>
+                                                                    <span className="subtask-count">
+                                                                        {subtaskStats.completed} из {subtaskStats.total} выполнено
+                                                                    </span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="todo-text">
+                                                <div className="todo-actions">
                                                     {todo.isEditing ? (
-                                                        <div className="todo-edit-form">
+                                                        <>
+                                                            <button
+                                                                className="edit-button"
+                                                                onClick={(e) => saveEditTodo(todo.id, e)}
+                                                                title="Сохранить"
+                                                            >
+                                                                <i className="fas fa-check"></i>
+                                                            </button>
+                                                            <button
+                                                                className="edit-cancel-button"
+                                                                onClick={(e) => cancelEditTodo(todo.id, e)}
+                                                                title="Отменить редактирование"
+                                                            >
+                                                                <i className="fas fa-times"></i>
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="todo-menu-container">
+                                                            <button
+                                                                className="todo-menu-button"
+                                                                onClick={(e) => toggleTodoMenu(todo.id, e)}
+                                                                title="Меню"
+                                                            >
+                                                                <i className="fas fa-ellipsis-v"></i>
+                                                            </button>
+                                                            {isTodoMenuOpen && (
+                                                                <div 
+                                                                    className="todo-menu-dropdown" 
+                                                                    ref={getMenuRef('todo', todo.id)}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <button
+                                                                        className="menu-item"
+                                                                        onClick={(e) => startEditTodo(todo.id, todo.text, e)}
+                                                                    >
+                                                                        <i className="fas fa-edit"></i> Редактировать
+                                                                    </button>
+                                                                    <button
+                                                                        className="menu-item delete"
+                                                                        onClick={(e) => requestDeleteTodo(todo.id, todo.text, todo.subtasks.length, e)}
+                                                                    >
+                                                                        <i className="fas fa-trash"></i> Удалить
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Подзадачи (аккордеон) */}
+                                            {todo.isExpanded && (
+                                                <div className="subtasks-accordion">
+                                                    <div className="subtasks-content">
+                                                        {todo.subtasks.length > 0 ? (
+                                                            <div className="subtasks-list">
+                                                                {todo.subtasks.map(subtask => {
+                                                                    const isSubtaskMenuOpen = openSubtaskMenuId === `${todo.id}-${subtask.id}`;
+                                                                    return (
+                                                                        <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}>
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="subtask-checkbox"
+                                                                                checked={subtask.completed}
+                                                                                onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
+                                                                            />
+                                                                            {subtask.isEditing ? (
+                                                                                <div className="subtask-edit-form">
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        className="subtask-edit-input"
+                                                                                        value={subtask.editingText}
+                                                                                        onChange={(e) => setTodos(todos.map(t => {
+                                                                                            if (t.id === todo.id) {
+                                                                                                return {
+                                                                                                    ...t,
+                                                                                                    subtasks: t.subtasks.map(s => 
+                                                                                                        s.id === subtask.id ? {...s, editingText: e.target.value} : s
+                                                                                                    )
+                                                                                                };
+                                                                                            }
+                                                                                            return t;
+                                                                                        }))}
+                                                                                        onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
+                                                                                        autoFocus
+                                                                                    />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div 
+                                                                                    className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
+                                                                                    onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                >
+                                                                                    {subtask.text}
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="subtask-actions">
+                                                                                {subtask.isEditing ? (
+                                                                                    <>
+                                                                                        <button
+                                                                                            className="edit-subtask-button"
+                                                                                            onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
+                                                                                            title="Сохранить"
+                                                                                        >
+                                                                                            <i className="fas fa-check"></i>
+                                                                                        </button>
+                                                                                        <button
+                                                                                            className="edit-cancel-subtask-button"
+                                                                                            onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
+                                                                                            title="Отменить редактирование"
+                                                                                        >
+                                                                                            <i className="fas fa-times"></i>
+                                                                                        </button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <div className="subtask-menu-container">
+                                                                                        <button
+                                                                                            className="subtask-menu-button"
+                                                                                            onClick={(e) => toggleSubtaskMenu(todo.id, subtask.id, e)}
+                                                                                            title="Меню"
+                                                                                        >
+                                                                                            <i className="fas fa-ellipsis-v"></i>
+                                                                                        </button>
+                                                                                        {isSubtaskMenuOpen && (
+                                                                                            <div 
+                                                                                                className="subtask-menu-dropdown" 
+                                                                                                ref={getMenuRef('subtask', `${todo.id}-${subtask.id}`)}
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                            >
+                                                                                                <button
+                                                                                                    className="menu-item"
+                                                                                                    onClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                                >
+                                                                                                    <i className="fas fa-edit"></i> Редактировать
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    className="menu-item delete"
+                                                                                                    onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                                >
+                                                                                                    <i className="fas fa-trash"></i> Удалить
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="no-subtasks">
+                                                                <i className="fas fa-inbox"></i>
+                                                                <span>Нет подзадач</span>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {/* Добавление новой подзадачи */}
+                                                        <div className="add-subtask-form">
                                                             <input
                                                                 type="text"
-                                                                className="todo-edit-input"
-                                                                value={todo.editingText}
-                                                                onChange={(e) => setTodos(todos.map(t => 
-                                                                    t.id === todo.id ? {...t, editingText: e.target.value} : t
-                                                                ))}
-                                                                onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
-                                                                autoFocus
+                                                                className="subtask-input"
+                                                                placeholder="Добавить подзадачу..."
+                                                                value={newSubtaskTexts[todo.id] || ''}
+                                                                onChange={(e) => setNewSubtaskTexts({
+                                                                    ...newSubtaskTexts,
+                                                                    [todo.id]: e.target.value
+                                                                })}
+                                                                onKeyPress={(e) => handleSubtaskKeyPress(e, todo.id)}
                                                             />
+                                                            <button 
+                                                                className="add-subtask-button"
+                                                                onClick={() => addSubtask(todo.id)}
+                                                                title="Добавить подзадачу"
+                                                            >
+                                                                <i className="fas fa-plus"></i>
+                                                            </button>
                                                         </div>
-                                                    ) : (
-                                                        <div 
-                                                            className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`}
-                                                            onDoubleClick={() => startEditTodo(todo.id, todo.text)}
-                                                        >
-                                                            {todo.text}
-                                                        </div>
-                                                    )}
-                                                    <div className="todo-meta">
-                                                        <span className="todo-date">
-                                                            <i className="far fa-calendar-alt"></i> 
-                                                            {todo.completed && todo.completedAt ? (
-                                                                <span>
-                                                                    {formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}
-                                                                </span>
-                                                            ) : (
-                                                                <span>{formatDate(todo.createdAt)}</span>
-                                                            )}
-                                                        </span>
-                                                        {todo.subtasks.length > 0 && subtaskStats && (
-                                                            <span className="subtask-stats">
-                                                                <i className="fas fa-list"></i>
-                                                                <span className="subtask-count">
-                                                                    {subtaskStats.completed} из {subtaskStats.total} выполнено
-                                                                </span>
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="todo-actions">
-                                                {todo.isEditing ? (
-                                                    <>
-                                                        <button
-                                                            className="edit-button"
-                                                            onClick={(e) => saveEditTodo(todo.id, e)}
-                                                            title="Сохранить"
-                                                        >
-                                                            <i className="fas fa-check"></i>
-                                                        </button>
-                                                        <button
-                                                            className="edit-cancel-button"
-                                                            onClick={(e) => cancelEditTodo(todo.id, e)}
-                                                            title="Отменить редактирование"
-                                                        >
-                                                            <i className="fas fa-times"></i>
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            className="edit-button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                startEditTodo(todo.id, todo.text);
-                                                            }}
-                                                            title="Редактировать"
-                                                        >
-                                                            <i className="fas fa-edit"></i>
-                                                        </button>
-                                                        <button
-                                                            className="delete-button"
-                                                            onClick={(e) => requestDeleteTodo(todo.id, todo.text, todo.subtasks.length, e)}
-                                                            title="Удалить задачу"
-                                                        >
-                                                            <i className="fas fa-trash"></i>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
+                                            )}
                                         </div>
-                                        
-                                        {/* Подзадачи (аккордеон) */}
-                                        {todo.isExpanded && (
-                                            <div className="subtasks-accordion">
-                                                <div className="subtasks-content">
-                                                    {todo.subtasks.length > 0 ? (
-                                                        <div className="subtasks-list">
-                                                            {todo.subtasks.map(subtask => (
-                                                                <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''}`}>
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="subtask-checkbox"
-                                                                        checked={subtask.completed}
-                                                                        onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
-                                                                    />
-                                                                    {subtask.isEditing ? (
-                                                                        <div className="subtask-edit-form">
-                                                                            <input
-                                                                                type="text"
-                                                                                className="subtask-edit-input"
-                                                                                value={subtask.editingText}
-                                                                                onChange={(e) => setTodos(todos.map(t => {
-                                                                                    if (t.id === todo.id) {
-                                                                                        return {
-                                                                                            ...t,
-                                                                                            subtasks: t.subtasks.map(s => 
-                                                                                                s.id === subtask.id ? {...s, editingText: e.target.value} : s
-                                                                                            )
-                                                                                        };
-                                                                                    }
-                                                                                    return t;
-                                                                                }))}
-                                                                                onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
-                                                                                autoFocus
-                                                                            />
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div 
-                                                                            className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
-                                                                            onDoubleClick={() => startEditSubtask(todo.id, subtask.id, subtask.text)}
-                                                                        >
-                                                                            {subtask.text}
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="subtask-actions">
-                                                                        {subtask.isEditing ? (
-                                                                            <>
-                                                                                <button
-                                                                                    className="edit-subtask-button"
-                                                                                    onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
-                                                                                    title="Сохранить"
-                                                                                >
-                                                                                    <i className="fas fa-check"></i>
-                                                                                </button>
-                                                                                <button
-                                                                                    className="edit-cancel-subtask-button"
-                                                                                    onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
-                                                                                    title="Отменить редактирование"
-                                                                                >
-                                                                                    <i className="fas fa-times"></i>
-                                                                                </button>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <button
-                                                                                    className="edit-subtask-button"
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        startEditSubtask(todo.id, subtask.id, subtask.text);
-                                                                                    }}
-                                                                                    title="Редактировать"
-                                                                                >
-                                                                                    <i className="fas fa-edit"></i>
-                                                                                </button>
-                                                                                <button
-                                                                                    className="delete-subtask-button"
-                                                                                    onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                    title="Удалить подзадачу"
-                                                                                >
-                                                                                    <i className="fas fa-times"></i>
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="no-subtasks">
-                                                            <i className="fas fa-inbox"></i>
-                                                            <span>Нет подзадач</span>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* Добавление новой подзадачи */}
-                                                    <div className="add-subtask-form">
-                                                        <input
-                                                            type="text"
-                                                            className="subtask-input"
-                                                            placeholder="Добавить подзадачу..."
-                                                            value={newSubtaskTexts[todo.id] || ''}
-                                                            onChange={(e) => setNewSubtaskTexts({
-                                                                ...newSubtaskTexts,
-                                                                [todo.id]: e.target.value
-                                                            })}
-                                                            onKeyPress={(e) => handleSubtaskKeyPress(e, todo.id)}
-                                                        />
-                                                        <button 
-                                                            className="add-subtask-button"
-                                                            onClick={() => addSubtask(todo.id)}
-                                                            title="Добавить подзадачу"
-                                                        >
-                                                            <i className="fas fa-plus"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })
-                        )}
+                                    );
+                                })
+                            )}
+                        </div>
                     </div>
 
                     <div className="footer">
@@ -929,6 +1040,7 @@
                         <p>• Поддерживается импорт как старых, так и новых форматов файлов</p>
                         <p>• Нажмите на стрелку рядом с задачей, чтобы увидеть подзадачи</p>
                         <p>• Двойной клик по задаче или подзадаче для редактирования</p>
+                        <p>• Кнопка меню (три точки) открывает опции редактирования и удаления</p>
                     </div>
 
                     {/* Универсальное окно подтверждения */}
