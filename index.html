@@ -616,18 +616,14 @@
 
             // Обработка нажатия клавиши для редактирования задачи
             const handleEditTodoKeyPress = (e, id) => {
-                if (e.key === 'Enter') {
-                    saveEditTodo(id, e);
-                } else if (e.key === 'Escape') {
+                 if (e.key === 'Escape') {
                     cancelEditTodo(id, e);
                 }
             };
 
             // Обработка нажатия клавиши для редактирования подзадачи
             const handleEditSubtaskKeyPress = (e, todoId, subtaskId) => {
-                if (e.key === 'Enter') {
-                    saveEditSubtask(todoId, subtaskId, e);
-                } else if (e.key === 'Escape') {
+                 if (e.key === 'Escape') {
                     cancelEditSubtask(todoId, subtaskId, e);
                 }
             };
@@ -798,12 +794,12 @@
                                                         onClick={(e) => toggleTodoExpanded(todo.id, e)}
                                                         title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
                                                     >
-                                                        <i className={`fas fa-chevron-${todo.isExpanded ? 'up' : 'down'}`}></i>
+                                                        <i className={`fas fa-chevron-${todo.isExpanded ? 'down' : 'up'}`}></i>
                                                     </div>
                                                     <div className="todo-text">
                                                         {todo.isEditing ? (
                                                             <div className="todo-edit-form">
-                                                                <input
+                                                                <textarea
                                                                     type="text"
                                                                     className="todo-edit-input"
                                                                     value={todo.editingText}
@@ -812,7 +808,7 @@
                                                                     ))}
                                                                     onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
                                                                     autoFocus
-                                                                />
+                                                                ></textarea>
                                                             </div>
                                                         ) : (
                                                             <div 
@@ -914,7 +910,7 @@
                                                                             />
                                                                             {subtask.isEditing ? (
                                                                                 <div className="subtask-edit-form">
-                                                                                    <input
+                                                                                    <textarea
                                                                                         type="text"
                                                                                         className="subtask-edit-input"
                                                                                         value={subtask.editingText}
@@ -931,7 +927,7 @@
                                                                                         }))}
                                                                                         onKeyPress={(e) => handleEditSubtaskKeyPress(e, todo.id, subtask.id)}
                                                                                         autoFocus
-                                                                                    />
+                                                                                    ></textarea>
                                                                                 </div>
                                                                             ) : (
                                                                                 <div 
