@@ -342,8 +342,8 @@
                 const todo = todos.find(t => t.id === id);
                 if (!todo) return;
                 
-                const trimmedText = todo.editingText.trim();
-                if (trimmedText === '') {
+                const text = todo.editingText;
+                if (text === '') {
                     showNotification('Текст задачи не может быть пустым');
                     return;
                 }
@@ -352,9 +352,9 @@
                     if (todo.id === id) {
                         return { 
                             ...todo, 
-                            text: trimmedText,
+                            text: text,
                             isEditing: false,
-                            editingText: trimmedText
+                            editingText: text
                         };
                     }
                     return todo;
@@ -413,8 +413,8 @@
                 const subtask = todo.subtasks.find(s => s.id === subtaskId);
                 if (!subtask) return;
                 
-                const trimmedText = subtask.editingText.trim();
-                if (trimmedText === '') {
+                const text = subtask.editingText;
+                if (text === '') {
                     showNotification('Текст подзадачи не может быть пустым');
                     return;
                 }
@@ -427,9 +427,9 @@
                                 if (subtask.id === subtaskId) {
                                     return { 
                                         ...subtask, 
-                                        text: trimmedText,
+                                        text: text,
                                         isEditing: false,
-                                        editingText: trimmedText
+                                        editingText: text
                                     };
                                 }
                                 return subtask;

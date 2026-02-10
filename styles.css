@@ -665,6 +665,7 @@ body {
     font-size: 17px;
     word-break: break-word;
     line-height: 1.4;
+    white-space: pre-wrap;
 }
 
 .todo-completed-text {
@@ -819,6 +820,7 @@ body {
     color: #495057;
     word-break: break-word;
     line-height: 1.3;
+    white-space: pre-wrap;
 }
 
 .subtask-completed-text {
@@ -942,6 +944,7 @@ body {
 .todo-edit-input,
 .subtask-edit-input {
     width: 100%;
+    height: 200px;
     padding: 8px 12px;
     border: 2px solid #4a00e0;
     border-radius: 6px;
@@ -949,6 +952,8 @@ body {
     outline: none;
     transition: border-color 0.2s;
     background: white;
+    box-sizing: border-box;
+    resize: both;
 }
 
 .subtask-edit-input {
