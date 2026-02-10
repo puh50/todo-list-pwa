@@ -499,17 +499,6 @@ body {
     z-index: 20001;
 }
 
-@media (max-width: 768px) {
-    .filter-buttons {
-        padding: 20px 10px;
-    }
-
-    .filter-button {
-        font-size: 12px;
-        padding: 8px 10px;
-    }
-}
-
 @media (max-width: 500px) {
     body {
         padding: 10px;
