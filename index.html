@@ -67,6 +67,11 @@
             const [openSubtaskMenuId, setOpenSubtaskMenuId] = useState(null);
             const menuRefs = useRef({});
 
+            // ----- НОВЫЕ СОСТОЯНИЯ ДЛЯ МОБИЛЬНОГО ADD -----
+            const [mobileAddMode, setMobileAddMode] = useState(false);
+            const [mobileNewTodo, setMobileNewTodo] = useState('');
+            // ------------------------------------------------
+
             // Сохранение задач в локальное хранилище при изменении
             useEffect(() => {
                 localStorage.setItem('todos', JSON.stringify(todos));
@@ -212,30 +217,59 @@
                 reader.readAsText(file);
             };
 
-            // Добавление новой задачи
-            const addTodo = () => {
-                if (newTodo.trim() === '') {
+            // Добавление новой задачи (основной метод, используется и мобильным)
+            const addTodo = (text) => {
+                if (text.trim() === '') {
                     showNotification('Введите текст задачи');
-                    return;
+                    return false;
                 }
 
                 const todo = {
                     id: Date.now(),
-                    text: newTodo.trim(),
+                    text: text.trim(),
                     completed: false,
                     createdAt: new Date().toISOString(),
                     completedAt: null,
                     subtasks: [],
                     isExpanded: false,
                     isEditing: false,
-                    editingText: newTodo.trim(),
+                    editingText: text.trim(),
                     isMenuOpen: false
                 };
 
                 setTodos([todo, ...todos]);
-                setNewTodo('');
                 showNotification('Задача добавлена');
+                return true;
             };
+
+            // ----- НОВЫЕ МОБИЛЬНЫЕ ОБРАБОТЧИКИ -----
+            const handleMobileFabClick = () => {
+                if (!mobileAddMode) {
+                    // Включаем режим добавления
+                    setMobileAddMode(true);
+                } else {
+                    // Режим уже включён – добавляем задачу
+                    addMobileTodo();
+                }
+            };
+
+            const addMobileTodo = () => {
+                if (mobileNewTodo.trim() === '') {
+                    showNotification('Введите текст задачи');
+                    return;
+                }
+                const success = addTodo(mobileNewTodo);
+                if (success) {
+                    setMobileNewTodo('');
+                    setMobileAddMode(false);
+                }
+            };
+
+            const cancelMobileAdd = () => {
+                setMobileAddMode(false);
+                setMobileNewTodo('');
+            };
+            // ---------------------------------------
 
             // Переключение отображения подзадач
             const toggleTodoExpanded = (id, e) => {
@@ -603,7 +637,7 @@
             // Обработка нажатия клавиши Enter для задачи
             const handleKeyPress = (e) => {
                 if (e.key === 'Enter') {
-                    addTodo();
+                    addTodo(newTodo);
                 }
             };
 
@@ -729,7 +763,7 @@
                             onChange={(e) => setNewTodo(e.target.value)}
                             onKeyPress={handleKeyPress}
                         />
-                        <button className="add-button" onClick={addTodo}>
+                        <button className="add-button" onClick={() => addTodo(newTodo)}>
                             <i className="fas fa-plus"></i> Добавить
                         </button>
                     </div>
@@ -1000,7 +1034,7 @@
                                                         
                                                         {/* Добавление новой подзадачи */}
                                                         <div className="add-subtask-form">
-                                                            <input
+                                                            <textarea
                                                                 type="text"
                                                                 className="subtask-input"
                                                                 placeholder="Добавить подзадачу..."
@@ -1010,7 +1044,7 @@
                                                                     [todo.id]: e.target.value
                                                                 })}
                                                                 onKeyPress={(e) => handleSubtaskKeyPress(e, todo.id)}
-                                                            />
+                                                            ></textarea>
                                                             <button 
                                                                 className="add-subtask-button"
                                                                 onClick={() => addSubtask(todo.id)}
@@ -1029,15 +1063,39 @@
                         </div>
                     </div>
 
-                    <div className="footer">
-                        <p><strong>Информация:</strong></p>
-                        <p>• Все данные сохраняются автоматически в вашем браузере</p>
-                        <p>• Используйте экспорт для резервного копирования задач</p>
-                        <p>• Поддерживается импорт как старых, так и новых форматов файлов</p>
-                        <p>• Нажмите на стрелку рядом с задачей, чтобы увидеть подзадачи</p>
-                        <p>• Двойной клик по задаче или подзадаче для редактирования</p>
-                        <p>• Кнопка меню (три точки) открывает опции редактирования и удаления</p>
+                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС ДОБАВЛЕНИЯ ----- */}
+                    <div className="mobile-add-ui">
+                        {mobileAddMode && (
+                            <div className="mobile-add-form">
+                                <textarea
+                                    className="mobile-todo-input"
+                                    placeholder="Добавьте новую задачу..."
+                                    value={mobileNewTodo}
+                                    onChange={(e) => setMobileNewTodo(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                        <div className="mobile-fab-container">
+                            {mobileAddMode && (
+                                <button
+                                    className="mobile-fab mobile-fab-cancel"
+                                    onClick={cancelMobileAdd}
+                                    title="Отмена"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            )}
+                            <button
+                                className={`mobile-fab ${mobileAddMode ? 'mobile-fab-confirm' : ''}`}
+                                onClick={handleMobileFabClick}
+                                title={mobileAddMode ? 'Добавить задачу' : 'Новая задача'}
+                            >
+                                <i className={`fas ${mobileAddMode ? 'fa-check' : 'fa-plus'}`}></i>
+                            </button>
+                        </div>
                     </div>
+                    {/* -------------------------------------------- */}
 
                     {/* Универсальное окно подтверждения */}
                     {showConfirm && confirmConfig && (
@@ -1150,17 +1208,17 @@
             installButton.id = 'pwa-install-button';
 
             if (isAppInstalled()) {
-                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> Открыть в приложении';
+                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> <span class="install-button-text">Открыть в приложении</span>';
                 installButton.classList.add('open-app-button');
                 installButton.onclick = openInstalledApp;
             } else if (isIOSDevice && isSafariBrowser) {
-                installButton.innerHTML = '<i class="fas fa-plus-circle"></i> Добавить на главный экран';
+                installButton.innerHTML = '<i class="fas fa-plus-circle"></i> <span class="install-button-text">Добавить на главный экран</span>';
                 installButton.onclick = showIOSInstallInstructions;
             } else if (canInstallPWA() && deferredPrompt) {
-                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i> <span class="install-button-text">Установить приложение</span>';
                 installButton.onclick = installPWA;
             } else {
-                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i> <span class="install-button-text">Установить приложение</span>';
                 installButton.onclick = showInstallInstructions;
             }
 

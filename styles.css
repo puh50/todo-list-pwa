@@ -197,6 +197,7 @@ body {
     max-height: 400px;
     overflow-y: auto;
     padding: 10px;
+    margin-bottom: 70px;
     position: relative;
     z-index: 1;
 }
@@ -499,6 +500,10 @@ body {
     z-index: 20001;
 }
 
+.mobile-add-ui {
+    display: none;
+}
+
 @media (max-width: 500px) {
     body {
         padding: 10px;
@@ -520,6 +525,8 @@ body {
 
     .input-container {
         flex-direction: column;
+        display: none;
+        /* Скрываем стандартную строку на мобильных */
     }
 
     .add-button {
@@ -545,13 +552,150 @@ body {
         flex-direction: column;
     }
 
-    .install-button {
+    /* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС ДОБАВЛЕНИЯ ----- */
+    .mobile-add-ui {
+        display: block;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .mobile-fab-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .mobile-fab {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4a00e0, #8e2de2);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 15px rgba(74, 0, 224, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid white;
+    }
+
+    .mobile-fab:hover {
+        transform: scale(1.05);
+    }
+
+    .mobile-fab:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-fab-confirm {
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+    }
+
+    .mobile-fab-cancel {
+        background: #ff4757;
+        box-shadow: 0 4px 10px rgba(255, 71, 87, 0.4);
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    .mobile-add-form {
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        left: 20px;
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        animation: slideUp 0.3s ease-out;
+        border: 1px solid #e0e0e0;
+    }
+
+    .mobile-todo-input {
+        width: 100%;
+        min-height: 100px;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 0.2s;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .mobile-todo-input:focus {
+        border-color: #4a00e0;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Кнопка PWA — круглая, слева */
+    #pwa-install-button {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        padding: 0;
+        bottom: 20px;
+        left: 20px;
+        right: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        box-shadow: 0 4px 15px rgba(74, 0, 224, 0.3);
+        background: linear-gradient(135deg, #4a00e0, #8e2de2);
+        box-sizing: border-box;
+        line-height: 1;
+        margin: 0;
+        max-width: none;
+    }
+
+    /* Зелёный фон для "Открыть в приложении" */
+    #pwa-install-button.open-app-button {
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+    }
+
+    /* Иконка — 24px, без отступов */
+    #pwa-install-button i {
+        font-size: 24px;
+        margin: 0;
+        display: inline-block;
+        line-height: 1;
+    }
+
+    /* Полностью скрываем текст */
+    #pwa-install-button .install-button-text {
+        display: none;
+    }
+}
+
+@media (max-width: 400px) {
+    .mobile-add-form {
+        left: 10px;
+        right: 10px;
+        bottom: 90px;
+    }
+
+    .mobile-add-ui {
         bottom: 10px;
         right: 10px;
-        left: 10px;
-        max-width: none;
-        width: calc(100% - 20px);
-        justify-content: center;
     }
 }
 
@@ -907,6 +1051,8 @@ body {
     outline: none;
     transition: border-color 0.2s;
     background: white;
+    field-sizing: content;
+    min-height: 1lh;
 }
 
 .subtask-input:focus {
