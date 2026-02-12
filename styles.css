@@ -1113,11 +1113,15 @@ body {
     }
 
     .header {
-        padding: 30px 10px;
+        padding: 30px 10px 20px 10px;
     }
 
     .header h1 {
         font-size: 24px;
+    }
+
+    .header p {
+        display: none;
     }
 
     .sync-status {
@@ -1129,16 +1133,6 @@ body {
     .input-container {
         display: none;
     }
-
-    /* .filter-buttons {
-        flex-wrap: wrap;
-        padding: 20px 10px;
-    }
-
-    .filter-button {
-        font-size: 12px;
-        padding: 8px 10px;
-    } */
 
     .confirm-content {
         padding: 20px;
