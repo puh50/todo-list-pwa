@@ -289,26 +289,75 @@ body {
 
 .filter-buttons {
     display: flex;
-    justify-content: center;
-    gap: 10px;
-    padding: 20px;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    margin: 0;
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    gap: 8px;
 }
 
+/* Группа фильтров (три кнопки) */
+.filter-group {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+}
+
+/* Базовая кнопка-фильтр — компактный чипс */
 .filter-button {
-    padding: 8px 15px;
-    border: 1px solid #ddd;
-    background-color: white;
-    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 24px; /* скруглённые, но не круглые */
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    transition: all 0.15s;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 14px;
+    line-height: 1;
 }
 
+.filter-button i {
+    font-size: 14px;
+    margin-right: 2px;
+}
+
+/* Активное состояние */
 .filter-button.active {
-    background-color: #4a00e0;
+    background: linear-gradient(135deg, #4a00e0, #8e2de2);
+    border-color: transparent;
     color: white;
-    border-color: #4a00e0;
+    box-shadow: 0 4px 8px rgba(74, 0, 224, 0.2);
+}
+
+/* Кнопка удаления выполненных — только иконка */
+.delete-completed-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    border-radius: 18px; /* круг */
+    color: #d32f2f;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.delete-completed-button:active {
+    background: #ffcdd2;
+    transform: scale(0.94);
 }
 
 /* Окна подтверждения */
@@ -1081,7 +1130,7 @@ body {
         display: none;
     }
 
-    .filter-buttons {
+    /* .filter-buttons {
         flex-wrap: wrap;
         padding: 20px 10px;
     }
@@ -1089,7 +1138,7 @@ body {
     .filter-button {
         font-size: 12px;
         padding: 8px 10px;
-    }
+    } */
 
     .confirm-content {
         padding: 20px;
@@ -1296,6 +1345,14 @@ body {
     }
     .todo-list-container {
         padding-bottom: 110px;
+    }
+
+    .filter-button {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+    .filter-button i {
+        font-size: 13px;
     }
 }
 

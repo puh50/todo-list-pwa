@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,6 +27,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
+
 <body>
     <div id="root"></div>
 
@@ -427,7 +429,7 @@
             const requestDeleteTodo = (id, text, subtaskCount, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenMenuId(null);
-                const message = subtaskCount > 0 
+                const message = subtaskCount > 0
                     ? `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" с ${subtaskCount} подзадачами?`
                     : `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`;
                 setConfirmConfig({
@@ -484,8 +486,8 @@
             const toggleComplete = (id) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
-                        const updatedTodo = { 
-                            ...todo, 
+                        const updatedTodo = {
+                            ...todo,
                             completed: !todo.completed,
                             completedAt: todo.completed ? null : new Date().toISOString()
                         };
@@ -658,17 +660,19 @@
 
                     {/* Фильтры */}
                     <div className="filter-buttons">
-                        <button className={`filter-button ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>
-                            Все ({todos.length})
-                        </button>
-                        <button className={`filter-button ${filter === 'active' ? 'active' : ''}`} onClick={() => setFilter('active')}>
-                            Активные ({activeCount})
-                        </button>
-                        <button className={`filter-button ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>
-                            Выполненные ({completedCount})
-                        </button>
-                        <button className="filter-button" onClick={requestClearCompleted} style={{ background: '#ffebee', color: '#d32f2f', borderColor: '#ffcdd2' }}>
-                            <i className="fas fa-trash-alt"></i> Удалить выполненные
+                        <div className="filter-group">
+                            <button className={`filter-button ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')} title="Все задачи">
+                                <i className="fas fa-list-ul"></i> {todos.length}
+                            </button>
+                            <button className={`filter-button ${filter === 'active' ? 'active' : ''}`} onClick={() => setFilter('active')} title="Активные задачи">
+                                <i className="fas fa-square"></i> {activeCount}
+                            </button>
+                            <button className={`filter-button ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')} title="Выполненные задачи">
+                                <i className="fas fa-check-square"></i> {completedCount}
+                            </button>
+                        </div>
+                        <button className="delete-completed-button" onClick={requestClearCompleted} title="Удалить выполненные">
+                            <i className="fas fa-trash-alt"></i>
                         </button>
                     </div>
 
@@ -699,7 +703,7 @@
                                                                 <textarea
                                                                     className="todo-edit-input"
                                                                     value={todo.editingText}
-                                                                    onChange={(e) => setTodos(todos.map(t => t.id === todo.id ? {...t, editingText: e.target.value} : t))}
+                                                                    onChange={(e) => setTodos(todos.map(t => t.id === todo.id ? { ...t, editingText: e.target.value } : t))}
                                                                     onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
                                                                     autoFocus
                                                                 ></textarea>
@@ -711,7 +715,7 @@
                                                         )}
                                                         <div className="todo-meta">
                                                             <span className="todo-date">
-                                                                <i className="far fa-calendar-alt"></i> 
+                                                                <i className="far fa-calendar-alt"></i>
                                                                 {todo.completed && todo.completedAt ? (
                                                                     <span>{formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}</span>
                                                                 ) : (
@@ -746,7 +750,7 @@
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Подзадачи (аккордеон) */}
                                             {todo.isExpanded && (
                                                 <div className="subtasks-accordion">
@@ -765,7 +769,7 @@
                                                                                         value={subtask.editingText}
                                                                                         onChange={(e) => setTodos(todos.map(t => {
                                                                                             if (t.id === todo.id) {
-                                                                                                return { ...t, subtasks: t.subtasks.map(s => s.id === subtask.id ? {...s, editingText: e.target.value} : s) };
+                                                                                                return { ...t, subtasks: t.subtasks.map(s => s.id === subtask.id ? { ...s, editingText: e.target.value } : s) };
                                                                                             }
                                                                                             return t;
                                                                                         }))}
@@ -1180,4 +1184,5 @@
         }, 2000);
     </script>
 </body>
+
 </html>
