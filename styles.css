@@ -348,8 +348,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* width: 40px;
-    height: 27px; */
     padding: 6px 12px;
     background: #ffebee;
     border: 1px solid #ffcdd2;
@@ -1124,11 +1122,27 @@ body {
     }
 
     .header {
-        padding: 30px 10px 20px 10px;
+        padding: 25px 10px 12px 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap; /* на случай очень узких экранов */
+        gap: 4px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .header h1 {
-        font-size: 24px;
+        font-size: 20px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
     }
 
     .header p {
@@ -1136,13 +1150,23 @@ body {
     }
 
     .sync-status {
-        font-size: 11px;
-        min-width: 100px;
-        padding: 4px 10px;
+        min-width: auto;
+        padding: 4px 8px;
+        font-size: 8px;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .sync-status i {
+        font-size: 10px;
     }
 
     .backup-section {
         padding: 15px 10px;
+    }
+
+    .backup-section p {
+        font-size: 14px;
     }
 
     .input-container {
