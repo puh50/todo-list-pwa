@@ -67,6 +67,11 @@
             const [openSubtaskMenuId, setOpenSubtaskMenuId] = useState(null);
             const menuRefs = useRef({});
 
+            // ----- МОБИЛЬНЫЕ СОСТОЯНИЯ -----
+            const [mobileAddMode, setMobileAddMode] = useState(false);
+            const [mobileNewTodo, setMobileNewTodo] = useState('');
+            // --------------------------------
+
             // Сохранение задач в локальное хранилище при изменении
             useEffect(() => {
                 localStorage.setItem('todos', JSON.stringify(todos));
@@ -85,39 +90,24 @@
             // Закрытие меню при клике вне его
             useEffect(() => {
                 const handleClickOutside = (event) => {
-                    // Проверяем, был ли клик вне любого меню
                     let isOutside = true;
-                    
-                    // Проверяем основной меню
                     if (openMenuId && menuRefs.current[`todo-${openMenuId}`]) {
                         const menuElement = menuRefs.current[`todo-${openMenuId}`];
-                        if (menuElement && menuElement.contains(event.target)) {
-                            isOutside = false;
-                        }
+                        if (menuElement && menuElement.contains(event.target)) isOutside = false;
                     }
-                    
-                    // Проверяем меню подзадач
                     if (openSubtaskMenuId && menuRefs.current[`subtask-${openSubtaskMenuId}`]) {
                         const menuElement = menuRefs.current[`subtask-${openSubtaskMenuId}`];
-                        if (menuElement && menuElement.contains(event.target)) {
-                            isOutside = false;
-                        }
+                        if (menuElement && menuElement.contains(event.target)) isOutside = false;
                     }
-                    
-                    // Проверяем кнопки меню
                     const menuButtons = document.querySelectorAll('.todo-menu-button, .subtask-menu-button');
                     menuButtons.forEach(button => {
-                        if (button.contains(event.target)) {
-                            isOutside = false;
-                        }
+                        if (button.contains(event.target)) isOutside = false;
                     });
-                    
                     if (isOutside) {
                         setOpenMenuId(null);
                         setOpenSubtaskMenuId(null);
                     }
                 };
-
                 document.addEventListener('click', handleClickOutside);
                 return () => document.removeEventListener('click', handleClickOutside);
             }, [openMenuId, openSubtaskMenuId]);
@@ -125,9 +115,7 @@
             // Показ уведомления
             const showNotification = (message) => {
                 setNotification(message);
-                setTimeout(() => {
-                    setNotification(null);
-                }, 3000);
+                setTimeout(() => setNotification(null), 3000);
             };
 
             // Экспорт задач в файл
@@ -138,17 +126,13 @@
                     version: '2.0',
                     format: 'todo-with-subtasks'
                 };
-
                 const dataStr = JSON.stringify(dataToSave, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
                 const exportFileDefaultName = `todo-list-backup-${new Date().toISOString().split('T')[0]}.json`;
-
                 const linkElement = document.createElement('a');
                 linkElement.setAttribute('href', dataUri);
                 linkElement.setAttribute('download', exportFileDefaultName);
                 linkElement.click();
-
                 const newOperation = { type: 'export', time: new Date().toISOString() };
                 setLastOperation(newOperation);
                 showNotification('Задачи экспортированы в файл');
@@ -158,13 +142,11 @@
             const importFromFile = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const importedData = JSON.parse(e.target.result);
                         let importedTodos = [];
-
                         if (importedData.todos && Array.isArray(importedData.todos)) {
                             if (importedData.format === 'todo-with-subtasks' || importedData.version === '2.0') {
                                 importedTodos = importedData.todos;
@@ -180,7 +162,6 @@
                                 }));
                                 showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
                             }
-                            
                             setTodos(importedTodos);
                             const newOperation = { type: 'import', time: new Date().toISOString() };
                             setLastOperation(newOperation);
@@ -202,7 +183,6 @@
                         } else {
                             showNotification('Неверный формат файла');
                         }
-
                         event.target.value = '';
                     } catch (error) {
                         console.error('Ошибка импорта:', error);
@@ -212,30 +192,56 @@
                 reader.readAsText(file);
             };
 
-            // Добавление новой задачи
-            const addTodo = () => {
-                if (newTodo.trim() === '') {
+            // Добавление новой задачи (общий метод)
+            const addTodo = (text) => {
+                if (text.trim() === '') {
                     showNotification('Введите текст задачи');
-                    return;
+                    return false;
                 }
-
                 const todo = {
                     id: Date.now(),
-                    text: newTodo.trim(),
+                    text: text.trim(),
                     completed: false,
                     createdAt: new Date().toISOString(),
                     completedAt: null,
                     subtasks: [],
                     isExpanded: false,
                     isEditing: false,
-                    editingText: newTodo.trim(),
+                    editingText: text.trim(),
                     isMenuOpen: false
                 };
-
                 setTodos([todo, ...todos]);
                 setNewTodo('');
                 showNotification('Задача добавлена');
+                return true;
             };
+
+            // ----- МОБИЛЬНЫЕ ОБРАБОТЧИКИ -----
+            const handleMobileFabClick = () => {
+                if (!mobileAddMode) {
+                    setMobileAddMode(true);
+                } else {
+                    addMobileTodo();
+                }
+            };
+
+            const addMobileTodo = () => {
+                if (mobileNewTodo.trim() === '') {
+                    showNotification('Введите текст задачи');
+                    return;
+                }
+                const success = addTodo(mobileNewTodo);
+                if (success) {
+                    setMobileNewTodo('');
+                    setMobileAddMode(false);
+                }
+            };
+
+            const cancelMobileAdd = () => {
+                setMobileAddMode(false);
+                setMobileNewTodo('');
+            };
+            // ---------------------------------------
 
             // Переключение отображения подзадач
             const toggleTodoExpanded = (id, e) => {
@@ -255,7 +261,6 @@
                     showNotification('Введите текст подзадачи');
                     return;
                 }
-
                 const newSubtask = {
                     id: Date.now() + Math.random(),
                     text: subtaskText.trim(),
@@ -265,7 +270,6 @@
                     editingText: subtaskText.trim(),
                     isMenuOpen: false
                 };
-
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
                         return {
@@ -276,12 +280,7 @@
                     }
                     return todo;
                 }));
-
-                setNewSubtaskTexts({
-                    ...newSubtaskTexts,
-                    [todoId]: ''
-                });
-
+                setNewSubtaskTexts({ ...newSubtaskTexts, [todoId]: '' });
                 showNotification('Подзадача добавлена');
             };
 
@@ -319,10 +318,7 @@
 
             // Начало редактирования задачи
             const startEditTodo = (id, text, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenMenuId(null);
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
@@ -334,28 +330,17 @@
 
             // Сохранение редактирования задачи
             const saveEditTodo = (id, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 const todo = todos.find(t => t.id === id);
                 if (!todo) return;
-                
                 const text = todo.editingText;
                 if (text === '') {
                     showNotification('Текст задачи не может быть пустым');
                     return;
                 }
-
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
-                        return { 
-                            ...todo, 
-                            text: text,
-                            isEditing: false,
-                            editingText: text
-                        };
+                        return { ...todo, text: text, isEditing: false, editingText: text };
                     }
                     return todo;
                 }));
@@ -364,11 +349,7 @@
 
             // Отмена редактирования задачи
             const cancelEditTodo = (id, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
                         return { ...todo, isEditing: false };
@@ -379,10 +360,7 @@
 
             // Начало редактирования подзадачи
             const startEditSubtask = (todoId, subtaskId, text, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenSubtaskMenuId(null);
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
@@ -402,35 +380,23 @@
 
             // Сохранение редактирования подзадачи
             const saveEditSubtask = (todoId, subtaskId, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 const todo = todos.find(t => t.id === todoId);
                 if (!todo) return;
-
                 const subtask = todo.subtasks.find(s => s.id === subtaskId);
                 if (!subtask) return;
-                
                 const text = subtask.editingText;
                 if (text === '') {
                     showNotification('Текст подзадачи не может быть пустым');
                     return;
                 }
-
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
                         return {
                             ...todo,
                             subtasks: todo.subtasks.map(subtask => {
                                 if (subtask.id === subtaskId) {
-                                    return { 
-                                        ...subtask, 
-                                        text: text,
-                                        isEditing: false,
-                                        editingText: text
-                                    };
+                                    return { ...subtask, text: text, isEditing: false, editingText: text };
                                 }
                                 return subtask;
                             })
@@ -443,11 +409,7 @@
 
             // Отмена редактирования подзадачи
             const cancelEditSubtask = (todoId, subtaskId, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
                         return {
@@ -466,16 +428,11 @@
 
             // Запрос на удаление задачи
             const requestDeleteTodo = (id, text, subtaskCount, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenMenuId(null);
-                const message = subtaskCount > 0 
+                const message = subtaskCount > 0
                     ? `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" с ${subtaskCount} подзадачами?`
                     : `Вы уверены, что хотите удалить задачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`;
-
                 setConfirmConfig({
                     type: 'delete',
                     title: 'Подтвердите удаление',
@@ -490,19 +447,13 @@
 
             // Запрос на удаление подзадачи
             const requestDeleteSubtask = (todoId, subtaskId, text, e) => {
-                if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                
+                if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenSubtaskMenuId(null);
                 setConfirmConfig({
                     type: 'delete',
                     title: 'Удалить подзадачу',
                     message: `Вы уверены, что хотите удалить подзадачу "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"?`,
-                    onConfirm: () => {
-                        deleteSubtask(todoId, subtaskId);
-                    }
+                    onConfirm: () => { deleteSubtask(todoId, subtaskId); }
                 });
                 setShowConfirm(true);
             };
@@ -514,7 +465,6 @@
                     showNotification('Нет выполненных задач для удаления');
                     return;
                 }
-
                 setConfirmConfig({
                     type: 'clear',
                     title: 'Подтвердите очистку',
@@ -537,14 +487,12 @@
             const toggleComplete = (id) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
-                        const updatedTodo = { 
-                            ...todo, 
+                        const updatedTodo = {
+                            ...todo,
                             completed: !todo.completed,
                             completedAt: todo.completed ? null : new Date().toISOString()
                         };
-                        if (updatedTodo.completed) {
-                            showNotification('Задача выполнена!');
-                        }
+                        if (updatedTodo.completed) showNotification('Задача выполнена!');
                         return updatedTodo;
                     }
                     return todo;
@@ -589,60 +537,41 @@
             // Получение статистики по подзадачам для конкретной задачи
             const getSubtaskStats = (todo) => {
                 if (!todo.subtasks || todo.subtasks.length === 0) return null;
-                
                 const completed = todo.subtasks.filter(subtask => subtask.completed).length;
                 const total = todo.subtasks.length;
-                
-                return {
-                    completed,
-                    remaining: total - completed,
-                    total
-                };
+                return { completed, remaining: total - completed, total };
             };
 
             // Обработка нажатия клавиши Enter для задачи
             const handleKeyPress = (e) => {
-                if (e.key === 'Enter') {
-                    addTodo();
-                }
+                if (e.key === 'Enter') addTodo(newTodo);
             };
 
             // Обработка нажатия клавиши Enter для подзадачи
             const handleSubtaskKeyPress = (e, todoId) => {
-                if (e.key === 'Enter') {
-                    addSubtask(todoId);
-                }
+                if (e.key === 'Enter') addSubtask(todoId);
             };
 
             // Обработка нажатия клавиши для редактирования задачи
             const handleEditTodoKeyPress = (e, id) => {
-                 if (e.key === 'Escape') {
-                    cancelEditTodo(id, e);
-                }
+                if (e.key === 'Escape') cancelEditTodo(id, e);
             };
 
             // Обработка нажатия клавиши для редактирования подзадачи
             const handleEditSubtaskKeyPress = (e, todoId, subtaskId) => {
-                 if (e.key === 'Escape') {
-                    cancelEditSubtask(todoId, subtaskId, e);
-                }
+                if (e.key === 'Escape') cancelEditSubtask(todoId, subtaskId, e);
             };
 
             // Форматирование даты
             const formatDate = (dateString) => {
                 if (!dateString) return '';
                 const date = new Date(dateString);
-                return date.toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                });
+                return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
             };
 
             // Форматирование времени для статуса
             const formatTimeAgo = (dateString) => {
                 if (!dateString) return 'никогда';
-
                 const now = new Date();
                 const date = new Date(dateString);
                 const diff = now - date;
@@ -650,14 +579,12 @@
                 const diffMinutes = Math.floor(diff / (1000 * 60));
                 const diffHours = Math.floor(diff / (1000 * 60 * 60));
                 const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-
                 if (diffSeconds < 30) return 'только что';
                 if (diffSeconds < 60) return `${diffSeconds} сек назад`;
                 if (diffMinutes < 60) return `${diffMinutes} мин назад`;
                 if (diffHours < 24) return `${diffHours} ч назад`;
                 if (diffDays === 1) return 'вчера';
                 if (diffDays < 7) return `${diffDays} дн назад`;
-
                 return formatDate(dateString);
             };
 
@@ -673,18 +600,19 @@
 
             return (
                 <div id="app">
+                    {/* Шапка */}
                     <div className="header">
                         <div className="sync-status synced">
                             <i className="fas fa-clock"></i>
                             {getOperationText(lastOperation.type)}: {formatTimeAgo(lastOperation.time)}
                         </div>
-
                         <div className="header-content">
-                            <h1><i className="fas fa-tasks"></i>Ту-Ду лист</h1>
+                            <h1><i className="fas fa-tasks"></i>Just Ту-Ду лист</h1>
                             <p>Приложение для управления задачами</p>
                         </div>
                     </div>
 
+                    {/* Экспорт/импорт */}
                     <div className="backup-section">
                         <p style={{ textAlign: 'center', marginBottom: '10px', color: '#666' }}>
                             Сохраните или загрузите задачи из файла
@@ -695,16 +623,13 @@
                             </button>
                             <label className="backup-button import-button">
                                 <i className="fas fa-file-import"></i> Импорт
-                                <input
-                                    type="file"
-                                    className="import-input"
-                                    accept=".json,application/json"
-                                    onChange={importFromFile}
-                                />
+                                <input type="file" className="import-input" accept=".json,application/json" onChange={importFromFile} />
                             </label>
                         </div>
                     </div>
 
+                    {/* Статистика */}
+                    {/*
                     <div className="stats">
                         <div className="stat-box">
                             <div className="stat-number">{todos.length}</div>
@@ -719,7 +644,8 @@
                             <div className="stat-label">Выполнено</div>
                         </div>
                     </div>
-
+*/}
+                    {/* Десктопное поле ввода (скрывается на мобильных) */}
                     <div className="input-container">
                         <input
                             type="text"
@@ -729,102 +655,71 @@
                             onChange={(e) => setNewTodo(e.target.value)}
                             onKeyPress={handleKeyPress}
                         />
-                        <button className="add-button" onClick={addTodo}>
+                        <button className="add-button" onClick={() => addTodo(newTodo)}>
                             <i className="fas fa-plus"></i> Добавить
                         </button>
                     </div>
 
+                    {/* Фильтры */}
                     <div className="filter-buttons">
-                        <button
-                            className={`filter-button ${filter === 'all' ? 'active' : ''}`}
-                            onClick={() => setFilter('all')}
-                        >
-                            Все ({todos.length})
-                        </button>
-                        <button
-                            className={`filter-button ${filter === 'active' ? 'active' : ''}`}
-                            onClick={() => setFilter('active')}
-                        >
-                            Активные ({activeCount})
-                        </button>
-                        <button
-                            className={`filter-button ${filter === 'completed' ? 'active' : ''}`}
-                            onClick={() => setFilter('completed')}
-                        >
-                            Выполненные ({completedCount})
-                        </button>
-                        <button
-                            className="filter-button"
-                            onClick={requestClearCompleted}
-                            style={{ background: '#ffebee', color: '#d32f2f', borderColor: '#ffcdd2' }}
-                        >
-                            <i className="fas fa-trash-alt"></i> Удалить выполненные
+                        <div className="filter-group">
+                            <button className={`filter-button ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')} title="Все задачи">
+                                <i className="fas fa-list-ul"></i> {todos.length}
+                            </button>
+                            <button className={`filter-button ${filter === 'active' ? 'active' : ''}`} onClick={() => setFilter('active')} title="Активные задачи">
+                                <i className="fas fa-square"></i> {activeCount}
+                            </button>
+                            <button className={`filter-button ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')} title="Выполненные задачи">
+                                <i className="fas fa-check-square"></i> {completedCount}
+                            </button>
+                        </div>
+                        <button className="delete-completed-button" onClick={requestClearCompleted} title="Удалить выполненные">
+                            <i className="fas fa-trash-alt"></i>
                         </button>
                     </div>
 
+                    {/* Список задач */}
                     <div className="todo-list-container">
                         <div className="todo-list">
                             {filteredTodos.length === 0 ? (
                                 <div className="empty-state">
                                     <i className="fas fa-clipboard-list"></i>
                                     <h3>Список пуст</h3>
-                                    <p>{filter === 'all'
-                                        ? 'Добавьте свою первую задачу!'
-                                        : filter === 'active'
-                                            ? 'Нет активных задач'
-                                            : 'Нет выполненных задач'}</p>
+                                    <p>{filter === 'all' ? 'Добавьте свою первую задачу!' : filter === 'active' ? 'Нет активных задач' : 'Нет выполненных задач'}</p>
                                 </div>
                             ) : (
                                 filteredTodos.map(todo => {
                                     const subtaskStats = getSubtaskStats(todo);
                                     const isTodoMenuOpen = openMenuId === todo.id;
-                                    
                                     return (
                                         <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}>
                                             <div className="todo-main">
                                                 <div className="todo-left">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="todo-checkbox"
-                                                        checked={todo.completed}
-                                                        onChange={() => toggleComplete(todo.id)}
-                                                    />
-                                                    <div 
-                                                        className="todo-expand" 
-                                                        onClick={(e) => toggleTodoExpanded(todo.id, e)}
-                                                        title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
-                                                    >
+                                                    <input type="checkbox" className="todo-checkbox" checked={todo.completed} onChange={() => toggleComplete(todo.id)} />
+                                                    <div className="todo-expand" onClick={(e) => toggleTodoExpanded(todo.id, e)} title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}>
                                                         <i className={`fas fa-chevron-${todo.isExpanded ? 'down' : 'up'}`}></i>
                                                     </div>
                                                     <div className="todo-text">
                                                         {todo.isEditing ? (
                                                             <div className="todo-edit-form">
                                                                 <textarea
-                                                                    type="text"
                                                                     className="todo-edit-input"
                                                                     value={todo.editingText}
-                                                                    onChange={(e) => setTodos(todos.map(t => 
-                                                                        t.id === todo.id ? {...t, editingText: e.target.value} : t
-                                                                    ))}
+                                                                    onChange={(e) => setTodos(todos.map(t => t.id === todo.id ? { ...t, editingText: e.target.value } : t))}
                                                                     onKeyPress={(e) => handleEditTodoKeyPress(e, todo.id)}
                                                                     autoFocus
                                                                 ></textarea>
                                                             </div>
                                                         ) : (
-                                                            <div 
-                                                                className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`}
-                                                                onDoubleClick={(e) => startEditTodo(todo.id, todo.text, e)}
-                                                            >
+                                                            <div className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`} onDoubleClick={(e) => startEditTodo(todo.id, todo.text, e)}>
                                                                 {todo.text}
                                                             </div>
                                                         )}
                                                         <div className="todo-meta">
                                                             <span className="todo-date">
-                                                                <i className="far fa-calendar-alt"></i> 
+                                                                <i className="far fa-calendar-alt"></i>
                                                                 {todo.completed && todo.completedAt ? (
-                                                                    <span>
-                                                                        {formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}
-                                                                    </span>
+                                                                    <span>{formatDate(todo.createdAt)} / {formatDate(todo.completedAt)}</span>
                                                                 ) : (
                                                                     <span>{formatDate(todo.createdAt)}</span>
                                                                 )}
@@ -832,9 +727,7 @@
                                                             {todo.subtasks.length > 0 && subtaskStats && (
                                                                 <span className="subtask-stats">
                                                                     <i className="fas fa-list"></i>
-                                                                    <span className="subtask-count">
-                                                                        {subtaskStats.completed} из {subtaskStats.total} выполнено
-                                                                    </span>
+                                                                    <span className="subtask-count">{subtaskStats.completed} из {subtaskStats.total} выполнено</span>
                                                                 </span>
                                                             )}
                                                         </div>
@@ -843,55 +736,23 @@
                                                 <div className="todo-actions">
                                                     {todo.isEditing ? (
                                                         <>
-                                                            <button
-                                                                className="edit-button"
-                                                                onClick={(e) => saveEditTodo(todo.id, e)}
-                                                                title="Сохранить"
-                                                            >
-                                                                <i className="fas fa-check"></i>
-                                                            </button>
-                                                            <button
-                                                                className="edit-cancel-button"
-                                                                onClick={(e) => cancelEditTodo(todo.id, e)}
-                                                                title="Отменить редактирование"
-                                                            >
-                                                                <i className="fas fa-times"></i>
-                                                            </button>
+                                                            <button className="edit-button" onClick={(e) => saveEditTodo(todo.id, e)} title="Сохранить"><i className="fas fa-check"></i></button>
+                                                            <button className="edit-cancel-button" onClick={(e) => cancelEditTodo(todo.id, e)} title="Отменить редактирование"><i className="fas fa-times"></i></button>
                                                         </>
                                                     ) : (
                                                         <div className="todo-menu-container">
-                                                            <button
-                                                                className="todo-menu-button"
-                                                                onClick={(e) => toggleTodoMenu(todo.id, e)}
-                                                                title="Меню"
-                                                            >
-                                                                <i className="fas fa-ellipsis-v"></i>
-                                                            </button>
+                                                            <button className="todo-menu-button" onClick={(e) => toggleTodoMenu(todo.id, e)} title="Меню"><i className="fas fa-ellipsis-v"></i></button>
                                                             {isTodoMenuOpen && (
-                                                                <div 
-                                                                    className="todo-menu-dropdown" 
-                                                                    ref={getMenuRef('todo', todo.id)}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <button
-                                                                        className="menu-item"
-                                                                        onClick={(e) => startEditTodo(todo.id, todo.text, e)}
-                                                                    >
-                                                                        <i className="fas fa-edit"></i> Редактировать
-                                                                    </button>
-                                                                    <button
-                                                                        className="menu-item delete"
-                                                                        onClick={(e) => requestDeleteTodo(todo.id, todo.text, todo.subtasks.length, e)}
-                                                                    >
-                                                                        <i className="fas fa-trash"></i> Удалить
-                                                                    </button>
+                                                                <div className="todo-menu-dropdown" ref={getMenuRef('todo', todo.id)} onClick={(e) => e.stopPropagation()}>
+                                                                    <button className="menu-item" onClick={(e) => startEditTodo(todo.id, todo.text, e)}><i className="fas fa-edit"></i> Редактировать</button>
+                                                                    <button className="menu-item delete" onClick={(e) => requestDeleteTodo(todo.id, todo.text, todo.subtasks.length, e)}><i className="fas fa-trash"></i> Удалить</button>
                                                                 </div>
                                                             )}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Подзадачи (аккордеон) */}
                                             {todo.isExpanded && (
                                                 <div className="subtasks-accordion">
@@ -902,26 +763,15 @@
                                                                     const isSubtaskMenuOpen = openSubtaskMenuId === `${todo.id}-${subtask.id}`;
                                                                     return (
                                                                         <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}>
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                className="subtask-checkbox"
-                                                                                checked={subtask.completed}
-                                                                                onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
-                                                                            />
+                                                                            <input type="checkbox" className="subtask-checkbox" checked={subtask.completed} onChange={() => toggleSubtaskComplete(todo.id, subtask.id)} />
                                                                             {subtask.isEditing ? (
                                                                                 <div className="subtask-edit-form">
                                                                                     <textarea
-                                                                                        type="text"
                                                                                         className="subtask-edit-input"
                                                                                         value={subtask.editingText}
                                                                                         onChange={(e) => setTodos(todos.map(t => {
                                                                                             if (t.id === todo.id) {
-                                                                                                return {
-                                                                                                    ...t,
-                                                                                                    subtasks: t.subtasks.map(s => 
-                                                                                                        s.id === subtask.id ? {...s, editingText: e.target.value} : s
-                                                                                                    )
-                                                                                                };
+                                                                                                return { ...t, subtasks: t.subtasks.map(s => s.id === subtask.id ? { ...s, editingText: e.target.value } : s) };
                                                                                             }
                                                                                             return t;
                                                                                         }))}
@@ -930,58 +780,23 @@
                                                                                     ></textarea>
                                                                                 </div>
                                                                             ) : (
-                                                                                <div 
-                                                                                    className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
-                                                                                    onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                >
+                                                                                <div className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`} onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}>
                                                                                     {subtask.text}
                                                                                 </div>
                                                                             )}
                                                                             <div className="subtask-actions">
                                                                                 {subtask.isEditing ? (
                                                                                     <>
-                                                                                        <button
-                                                                                            className="edit-subtask-button"
-                                                                                            onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)}
-                                                                                            title="Сохранить"
-                                                                                        >
-                                                                                            <i className="fas fa-check"></i>
-                                                                                        </button>
-                                                                                        <button
-                                                                                            className="edit-cancel-subtask-button"
-                                                                                            onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)}
-                                                                                            title="Отменить редактирование"
-                                                                                        >
-                                                                                            <i className="fas fa-times"></i>
-                                                                                        </button>
+                                                                                        <button className="edit-subtask-button" onClick={(e) => saveEditSubtask(todo.id, subtask.id, e)} title="Сохранить"><i className="fas fa-check"></i></button>
+                                                                                        <button className="edit-cancel-subtask-button" onClick={(e) => cancelEditSubtask(todo.id, subtask.id, e)} title="Отменить редактирование"><i className="fas fa-times"></i></button>
                                                                                     </>
                                                                                 ) : (
                                                                                     <div className="subtask-menu-container">
-                                                                                        <button
-                                                                                            className="subtask-menu-button"
-                                                                                            onClick={(e) => toggleSubtaskMenu(todo.id, subtask.id, e)}
-                                                                                            title="Меню"
-                                                                                        >
-                                                                                            <i className="fas fa-ellipsis-v"></i>
-                                                                                        </button>
+                                                                                        <button className="subtask-menu-button" onClick={(e) => toggleSubtaskMenu(todo.id, subtask.id, e)} title="Меню"><i className="fas fa-ellipsis-v"></i></button>
                                                                                         {isSubtaskMenuOpen && (
-                                                                                            <div 
-                                                                                                className="subtask-menu-dropdown" 
-                                                                                                ref={getMenuRef('subtask', `${todo.id}-${subtask.id}`)}
-                                                                                                onClick={(e) => e.stopPropagation()}
-                                                                                            >
-                                                                                                <button
-                                                                                                    className="menu-item"
-                                                                                                    onClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                                >
-                                                                                                    <i className="fas fa-edit"></i> Редактировать
-                                                                                                </button>
-                                                                                                <button
-                                                                                                    className="menu-item delete"
-                                                                                                    onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}
-                                                                                                >
-                                                                                                    <i className="fas fa-trash"></i> Удалить
-                                                                                                </button>
+                                                                                            <div className="subtask-menu-dropdown" ref={getMenuRef('subtask', `${todo.id}-${subtask.id}`)} onClick={(e) => e.stopPropagation()}>
+                                                                                                <button className="menu-item" onClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}><i className="fas fa-edit"></i> Редактировать</button>
+                                                                                                <button className="menu-item delete" onClick={(e) => requestDeleteSubtask(todo.id, subtask.id, subtask.text, e)}><i className="fas fa-trash"></i> Удалить</button>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
@@ -992,12 +807,8 @@
                                                                 })}
                                                             </div>
                                                         ) : (
-                                                            <div className="no-subtasks">
-                                                                <i className="fas fa-inbox"></i>
-                                                                <span>Нет подзадач</span>
-                                                            </div>
+                                                            <div className="no-subtasks"><i className="fas fa-inbox"></i><span>Нет подзадач</span></div>
                                                         )}
-                                                        
                                                         {/* Добавление новой подзадачи */}
                                                         <div className="add-subtask-form">
                                                             <input
@@ -1005,19 +816,10 @@
                                                                 className="subtask-input"
                                                                 placeholder="Добавить подзадачу..."
                                                                 value={newSubtaskTexts[todo.id] || ''}
-                                                                onChange={(e) => setNewSubtaskTexts({
-                                                                    ...newSubtaskTexts,
-                                                                    [todo.id]: e.target.value
-                                                                })}
+                                                                onChange={(e) => setNewSubtaskTexts({ ...newSubtaskTexts, [todo.id]: e.target.value })}
                                                                 onKeyPress={(e) => handleSubtaskKeyPress(e, todo.id)}
                                                             />
-                                                            <button 
-                                                                className="add-subtask-button"
-                                                                onClick={() => addSubtask(todo.id)}
-                                                                title="Добавить подзадачу"
-                                                            >
-                                                                <i className="fas fa-plus"></i>
-                                                            </button>
+                                                            <button className="add-subtask-button" onClick={() => addSubtask(todo.id)} title="Добавить подзадачу"><i className="fas fa-plus"></i></button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1029,37 +831,56 @@
                         </div>
                     </div>
 
-                    <div className="footer">
-                        <p><strong>Информация:</strong></p>
-                        <p>• Все данные сохраняются автоматически в вашем браузере</p>
-                        <p>• Используйте экспорт для резервного копирования задач</p>
-                        <p>• Поддерживается импорт как старых, так и новых форматов файлов</p>
-                        <p>• Нажмите на стрелку рядом с задачей, чтобы увидеть подзадачи</p>
-                        <p>• Двойной клик по задаче или подзадаче для редактирования</p>
-                        <p>• Кнопка меню (три точки) открывает опции редактирования и удаления</p>
+                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: форма ввода ----- */}
+                    <div className="mobile-add-ui">
+                        {mobileAddMode && (
+                            <div className="mobile-add-form">
+                                <textarea
+                                    className="mobile-todo-input"
+                                    placeholder="Добавьте новую задачу..."
+                                    value={mobileNewTodo}
+                                    onChange={(e) => setMobileNewTodo(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: ФУТЕР С КНОПКАМИ (СТИЛЬНЫЙ GLASSMORPHISM) ----- */}
+                    <div className="mobile-footer">
+                        <div className="mobile-footer-left">
+                            <div id="pwa-footer-button"></div>
+                        </div>
+                        <div className="mobile-footer-right">
+                            {mobileAddMode && (
+                                <button
+                                    className="mobile-fab mobile-fab-cancel"
+                                    onClick={cancelMobileAdd}
+                                    title="Отмена"
+                                >
+                                    <i className="fas fa-times"></i>
+                                </button>
+                            )}
+                            <button
+                                className={`mobile-fab ${mobileAddMode ? 'mobile-fab-confirm' : ''}`}
+                                onClick={handleMobileFabClick}
+                                title={mobileAddMode ? 'Добавить задачу' : 'Новая задача'}
+                            >
+                                <i className={`fas ${mobileAddMode ? 'fa-check' : 'fa-plus'}`}></i>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Универсальное окно подтверждения */}
                     {showConfirm && confirmConfig && (
                         <div className="confirm-modal">
                             <div className="confirm-content">
-                                <div className="confirm-icon">
-                                    <i className="fas fa-exclamation-triangle"></i>
-                                </div>
+                                <div className="confirm-icon"><i className="fas fa-exclamation-triangle"></i></div>
                                 <h3 className="confirm-title">{confirmConfig.title}</h3>
-                                <p className="confirm-text">
-                                    {confirmConfig.message}
-                                    <br />
-                                    Это действие нельзя отменить.
-                                </p>
+                                <p className="confirm-text">{confirmConfig.message}<br />Это действие нельзя отменить.</p>
                                 <div className="confirm-buttons">
-                                    <button className="confirm-button confirm-cancel" onClick={closeConfirm}>
-                                        <i className="fas fa-times"></i> Отмена
-                                    </button>
-                                    <button className={`confirm-button ${confirmConfig.type === 'clear' ? 'confirm-clear' : 'confirm-delete'}`} onClick={() => {
-                                        confirmConfig.onConfirm();
-                                        closeConfirm();
-                                    }}>
+                                    <button className="confirm-button confirm-cancel" onClick={closeConfirm}><i className="fas fa-times"></i> Отмена</button>
+                                    <button className={`confirm-button ${confirmConfig.type === 'clear' ? 'confirm-clear' : 'confirm-delete'}`} onClick={() => { confirmConfig.onConfirm(); closeConfirm(); }}>
                                         <i className="fas fa-trash"></i> {confirmConfig.type === 'clear' ? 'Удалить все' : 'Удалить'}
                                     </button>
                                 </div>
@@ -1112,16 +933,13 @@
 
         function openInstalledApp() {
             console.log('Пытаемся открыть установленное приложение');
-
             if (navigator.userAgent.includes('Android') || navigator.userAgent.includes('Chrome')) {
                 const currentUrl = window.location.href;
                 const appUrl = currentUrl.replace(/^https?:\/\//, 'todoapp://');
-
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 iframe.src = appUrl;
                 document.body.appendChild(iframe);
-
                 setTimeout(() => {
                     document.body.removeChild(iframe);
                     showNotification('Не удалось открыть приложение. Откройте его вручную.');
@@ -1132,6 +950,7 @@
             }
         }
 
+        // Функция создания кнопки PWA (адаптивная: мобильный → футер, десктоп → body)
         function createInstallButton() {
             if (installButton && document.body.contains(installButton)) {
                 document.body.removeChild(installButton);
@@ -1142,29 +961,38 @@
                 return;
             }
 
-            const isIOSDevice = isIOS();
-            const isSafariBrowser = isSafari();
+            const isMobile = window.matchMedia('(max-width: 500px)').matches;
 
             installButton = document.createElement('button');
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
 
             if (isAppInstalled()) {
-                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i> Открыть в приложении';
+                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
                 installButton.classList.add('open-app-button');
                 installButton.onclick = openInstalledApp;
-            } else if (isIOSDevice && isSafariBrowser) {
-                installButton.innerHTML = '<i class="fas fa-plus-circle"></i> Добавить на главный экран';
+            } else if (isIOS() && isSafari()) {
+                installButton.innerHTML = '<i class="fas fa-plus-circle"></i><span class="install-button-text">Добавить на главный экран</span>';
                 installButton.onclick = showIOSInstallInstructions;
             } else if (canInstallPWA() && deferredPrompt) {
-                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
                 installButton.onclick = installPWA;
             } else {
-                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
                 installButton.onclick = showInstallInstructions;
             }
 
-            document.body.appendChild(installButton);
+            if (isMobile) {
+                const footerContainer = document.getElementById('pwa-footer-button');
+                if (footerContainer) {
+                    footerContainer.appendChild(installButton);
+                } else {
+                    document.body.appendChild(installButton);
+                }
+            } else {
+                document.body.appendChild(installButton);
+            }
+
             console.log('Кнопка создана: установлено =', isAppInstalled());
         }
 
@@ -1173,31 +1001,25 @@
                 showNotification('Установка пока недоступна. Попробуйте через меню браузера.');
                 return;
             }
-
             console.log('Начинаем установку PWA');
-            installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Установка...';
+            installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="install-button-text">Установка...</span>';
             installButton.disabled = true;
-
             try {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
                     showNotification('Приложение устанавливается...');
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
-                    setTimeout(() => {
-                        createInstallButton();
-                    }, 2000);
+                    setTimeout(() => { createInstallButton(); }, 2000);
                 }
-
                 deferredPrompt = null;
             } catch (error) {
                 console.error('Ошибка установки:', error);
                 showNotification('Ошибка установки. Попробуйте через меню браузера.');
-                installButton.innerHTML = '<i class="fas fa-download"></i> Установить приложение';
+                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
                 installButton.disabled = false;
             }
         }
@@ -1205,183 +1027,71 @@
         function showIOSInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-
             modal.innerHTML = `
                 <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;">
-                        <i class="fas fa-mobile-alt" style="color: #007AFF;"></i>
-                        Добавить на главный экран
-                    </h2>
+                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-mobile-alt" style="color: #007AFF;"></i> Добавить на главный экран</h2>
                     <div style="text-align: left; margin-bottom: 25px; color: #555;">
                         <p><strong>1.</strong> Нажмите кнопку "Поделиться" <i class="fas fa-share-square"></i></p>
                         <p><strong>2.</strong> Прокрутите вниз и выберите "На экран "Домой"</p>
                         <p><strong>3.</strong> Нажмите "Добавить" в правом верхнем углу</p>
                         <p><strong>4.</strong> Готово! Приложение появится на главном экране</p>
                     </div>
-                    <button id="closeInstallModal" style="
-                        background: linear-gradient(135deg, #4a00e0, #8e2de2);
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        padding: 12px 30px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 600;
-                    ">
-                        Понятно
-                    </button>
+                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Понятно</button>
                 </div>
             `;
-
             document.body.appendChild(modal);
-
-            modal.querySelector('#closeInstallModal').addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
-            });
+            modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
+            modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
         }
 
         function showOpenAppInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-
             const browser = detectBrowser();
             let instructions = '';
-
             if (browser === 'chrome') {
-                instructions = `
-                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
-                    <p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу браузера</p>
-                    <p>2. Выберите <strong>"Открыть в приложении"</strong> из адресной строки</p>
-                    <p>Или откройте приложение с главного экрана вашего устройства.</p>
-                `;
+                instructions = `<p><strong>Чтобы открыть в установленном приложении:</strong></p><p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу браузера</p><p>2. Выберите <strong>"Открыть в приложении"</strong> из адресной строки</p><p>Или откройте приложение с главного экрана вашего устройства.</p>`;
             } else if (browser === 'firefox') {
-                instructions = `
-                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
-                    <p>1. Нажмите <strong>☰</strong> (menù)</p>
-                    <p>2. Выберите <strong>"Открыть в приложении"</strong></p>
-                    <p>Или откройте приложение с главного экрана вашего устройства.</p>
-                `;
+                instructions = `<p><strong>Чтобы открыть в установленном приложении:</strong></p><p>1. Нажмите <strong>☰</strong> (menù)</p><p>2. Выберите <strong>"Открыть в приложении"</strong></p><p>Или откройте приложение с главного экрана вашего устройства.</p>`;
             } else if (browser === 'safari') {
-                instructions = `
-                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
-                    <p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана</p>
-                    <p>2. Или нажмите "Поделиться" в Safari и выберите "Открыть в приложении"</p>
-                `;
+                instructions = `<p><strong>Чтобы открыть в установленном приложении:</strong></p><p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана</p><p>2. Или нажмите "Поделиться" в Safari и выберите "Открыть в приложении"</p>`;
             } else {
-                instructions = `
-                    <p><strong>Чтобы открыть в установленном приложении:</strong></p>
-                    <p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана вашего устройства</p>
-                    <p>2. Или используйте меню браузера для открытия в приложении</p>
-                `;
+                instructions = `<p><strong>Чтобы открыть в установленном приложении:</strong></p><p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана вашего устройства</p><p>2. Или используйте меню браузера для открытия в приложении</p>`;
             }
-
             modal.innerHTML = `
                 <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;">
-                        <i class="fas fa-external-link-alt" style="color: #00b09b;"></i>
-                        Открыть в приложении
-                    </h2>
-                    <div style="text-align: left; margin-bottom: 25px; color: #555;">
-                        ${instructions}
-                    </div>
-                    <button id="closeInstallModal" style="
-                        background: linear-gradient(135deg, #00b09b, #96c93d);
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        padding: 12px 30px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 600;
-                    ">
-                        Закрыть
-                    </button>
+                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-external-link-alt" style="color: #00b09b;"></i> Открыть в приложении</h2>
+                    <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
+                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #00b09b, #96c93d); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
                 </div>
             `;
-
             document.body.appendChild(modal);
-
-            modal.querySelector('#closeInstallModal').addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
-            });
+            modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
+            modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
         }
 
         function showInstallInstructions() {
             const modal = document.createElement('div');
             modal.className = 'install-modal';
-
             const browser = detectBrowser();
             let instructions = '';
-
             if (browser === 'chrome') {
-                instructions = `
-                    <p><strong>Для установки в Chrome/Edge/Opera:</strong></p>
-                    <p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу</p>
-                    <p>2. Выберите <strong>"Установить приложение"</strong></p>
-                    <p>3. Подтвердите установку</p>
-                `;
+                instructions = `<p><strong>Для установки в Chrome/Edge/Opera:</strong></p><p>1. Нажмите <strong>⋮</strong> (три точки) в правом верхнем углу</p><p>2. Выберите <strong>"Установить приложение"</strong></p><p>3. Подтвердите установку</p>`;
             } else if (browser === 'firefox') {
-                instructions = `
-                    <p><strong>Для установки в Firefox:</strong></p>
-                    <p>1. Нажмите <strong>☰</strong> (меню)</p>
-                    <p>2. Выберите <strong>"Установить"</strong></p>
-                `;
+                instructions = `<p><strong>Для установки в Firefox:</strong></p><p>1. Нажмите <strong>☰</strong> (меню)</p><p>2. Выберите <strong>"Установить"</strong></p>`;
             } else {
-                instructions = `
-                    <p><strong>Для установки приложения:</strong></p>
-                    <p>1. Откройте меню браузера (⋮ или ☰)</p>
-                    <p>2. Найдите пункт "Установить приложение"</p>
-                    <p>3. Подтвердите установку</p>
-                `;
+                instructions = `<p><strong>Для установки приложения:</strong></p><p>1. Откройте меню браузера (⋮ или ☰)</p><p>2. Найдите пункт "Установить приложение"</p><p>3. Подтвердите установку</p>`;
             }
-
             modal.innerHTML = `
                 <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;">
-                        <i class="fas fa-download" style="color: #4a00e0;"></i>
-                        Установить приложение
-                    </h2>
-                    <div style="text-align: left; margin-bottom: 25px; color: #555;">
-                        ${instructions}
-                    </div>
-                    <button id="closeInstallModal" style="
-                        background: linear-gradient(135deg, #4a00e0, #8e2de2);
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        padding: 12px 30px;
-                        font-size: 16px;
-                        cursor: pointer;
-                        font-weight: 600;
-                    ">
-                        Закрыть
-                    </button>
+                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-download" style="color: #4a00e0;"></i> Установить приложение</h2>
+                    <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
+                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
                 </div>
             `;
-
             document.body.appendChild(modal);
-
-            modal.querySelector('#closeInstallModal').addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
-            });
+            modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
+            modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
         }
 
         function detectBrowser() {
@@ -1397,72 +1107,48 @@
             const notification = document.createElement('div');
             notification.className = 'notification';
             notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
-
             document.body.appendChild(notification);
-
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 3000);
+            setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 3000);
         }
 
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
-
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('🎯 beforeinstallprompt сработал');
             e.preventDefault();
             deferredPrompt = e;
-
-            if (!isStandalone()) {
-                createInstallButton();
-            }
+            if (!isStandalone()) createInstallButton();
         });
 
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA успешно установлено!');
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
-
-            if (!isStandalone()) {
-                createInstallButton();
-            }
-
+            if (!isStandalone()) createInstallButton();
             deferredPrompt = null;
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
 
         window.addEventListener('load', () => {
             console.log('Загрузка страницы завершена');
-
-            if (isStandalone()) {
-                console.log('Приложение запущено в standalone режиме');
-                return;
-            }
-
+            if (isStandalone()) { console.log('Приложение запущено в standalone режиме'); return; }
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker зарегистрирован:', registration.scope);
-
-                        setTimeout(() => {
-                            if (!installButton && !isStandalone()) {
-                                createInstallButton();
-                            }
-                        }, 2000);
+                        setTimeout(() => { if (!installButton && !isStandalone()) createInstallButton(); }, 2000);
                     })
                     .catch(error => {
                         console.log('❌ Ошибка регистрации Service Worker:', error);
-                        if (!installButton && !isStandalone()) {
-                            createInstallButton();
-                        }
+                        if (!installButton && !isStandalone()) createInstallButton();
                     });
             } else {
                 console.log('Service Worker не поддерживается');
-                if (!installButton && !isStandalone()) {
-                    createInstallButton();
-                }
+                if (!installButton && !isStandalone()) createInstallButton();
             }
+        });
+
+        window.addEventListener('resize', () => {
+            if (!isStandalone()) createInstallButton();
         });
 
         function updateOnlineStatus() {
@@ -1486,7 +1172,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM загружен');
             updateOnlineStatus();
-
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
