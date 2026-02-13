@@ -211,6 +211,7 @@
                     isMenuOpen: false
                 };
                 setTodos([todo, ...todos]);
+                setNewTodo('');
                 showNotification('Задача добавлена');
                 return true;
             };
