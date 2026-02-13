@@ -1,5 +1,5 @@
 :root {
-  --footer-height: 90px;
+    --footer-height: 90px;
 }
 
 * {
@@ -16,7 +16,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    anchor-name: --body;
 }
 
 #app {
@@ -37,7 +36,6 @@ body {
     padding: 25px 20px;
     text-align: center;
     position: relative;
-    anchor-name: --header;
 }
 
 .sync-status {
@@ -169,7 +167,6 @@ body {
     display: flex;
     gap: 10px;
     border-bottom: 1px solid #eee;
-    anchor-name: --input-container;
 }
 
 .todo-input {
@@ -303,7 +300,6 @@ body {
     background: transparent;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     gap: 8px;
-    anchor-name: --filter-buttons;
 }
 
 /* Группа фильтров (три кнопки) */
@@ -322,13 +318,14 @@ body {
     padding: 6px 12px;
     background: white;
     border: 1px solid #e0e0e0;
-    border-radius: 24px; /* скруглённые, но не круглые */
+    border-radius: 8px;
+    /* скруглённые, но не круглые */
     font-size: 13px;
     font-weight: 500;
     color: #555;
     transition: all 0.15s;
     white-space: nowrap;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     cursor: pointer;
     line-height: 1;
 }
@@ -351,13 +348,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    /* width: 40px;
+    height: 27px; */
+    padding: 6px 12px;
     background: #ffebee;
     border: 1px solid #ffcdd2;
-    border-radius: 18px; /* круг */
+    border-radius: 8px;
+    /* скруглённая, но не круглые */
     color: #d32f2f;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.15s;
     flex-shrink: 0;
@@ -561,7 +560,6 @@ body {
     padding: 15px 20px;
     border-bottom: 1px solid #eee;
     background-color: #f9f9f9;
-    anchor-name: --backup-section;
 }
 
 .backup-buttons {
@@ -1122,8 +1120,8 @@ body {
     }
 
     #app {
-    height: calc(100vh - 20px);
-}
+        height: calc(100vh - 20px);
+    }
 
     .header {
         padding: 30px 10px 20px 10px;
@@ -1141,6 +1139,10 @@ body {
         font-size: 11px;
         min-width: 100px;
         padding: 4px 10px;
+    }
+
+    .backup-section {
+        padding: 15px 10px;
     }
 
     .input-container {
@@ -1172,14 +1174,12 @@ body {
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(1px);
         -webkit-backdrop-filter: blur(15px);
-        /* border-top: 1px solid rgba(255, 255, 255, 0.3); */
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
         padding: 0 20px 10px 20px;
         z-index: 10000;
         box-sizing: border-box;
         border-bottom-left-radius: inherit;
         border-bottom-right-radius: inherit;
-        anchor-name: --footer;
     }
 
     .mobile-footer-left {
@@ -1333,14 +1333,15 @@ body {
     }
 
     .todo-list {
-    position: relative;
-}
+        position: relative;
+    }
 
     @keyframes slideUp {
         from {
             opacity: 0;
             transform: translateY(20px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
@@ -1359,6 +1360,7 @@ body {
         padding: 6px 8px;
         font-size: 12px;
     }
+
     .filter-button i {
         font-size: 13px;
     }
