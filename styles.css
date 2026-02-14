@@ -830,6 +830,7 @@ body {
     display: flex;
     gap: 5px;
     margin-left: 10px;
+    margin-right: 12px;
     position: relative;
 }
 
@@ -1457,4 +1458,42 @@ body {
 
 .todo-list-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* ===== НОВЫЕ СТИЛИ ДЛЯ DRAG & DROP (БЕЗ РУЧКИ) ===== */
+
+/* Стили для перетаскивания */
+.todo-item[draggable="true"],
+.subtask-item[draggable="true"] {
+    cursor: grab;
+}
+
+.todo-item[draggable="true"]:active,
+.subtask-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.dragging {
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.todo-item.drag-over-top {
+    border-top: 3px solid #4a00e0 !important;
+    margin-top: 2px;
+    transition: border 0.1s;
+}
+
+.todo-item.drag-over-bottom {
+    border-bottom: 3px solid #4a00e0 !important;
+    margin-bottom: 2px;
+    transition: border 0.1s;
+}
+
+.subtask-item.drag-over-top {
+    border-top: 2px solid #4a00e0 !important;
+}
+
+.subtask-item.drag-over-bottom {
+    border-bottom: 2px solid #4a00e0 !important;
 }
