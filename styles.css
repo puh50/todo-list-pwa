@@ -1460,20 +1460,17 @@ body {
     background: #a8a8a8;
 }
 
-/* ===== НОВЫЕ СТИЛИ ДЛЯ УЛУЧШЕННОГО DRAG & DROP ===== */
-.drag-handle {
-    cursor: move;
-    color: #aaa;
-    display: flex;
-    align-items: center;
-    user-select: none;
-    position: absolute;
-    right: 0px;
-    bottom: 0px;
+/* ===== НОВЫЕ СТИЛИ ДЛЯ DRAG & DROP (БЕЗ РУЧКИ) ===== */
+
+/* Стили для перетаскивания */
+.todo-item[draggable="true"],
+.subtask-item[draggable="true"] {
+    cursor: grab;
 }
 
-.drag-handle:hover {
-    color: #333;
+.todo-item[draggable="true"]:active,
+.subtask-item[draggable="true"]:active {
+    cursor: grabbing;
 }
 
 .dragging {
@@ -1499,10 +1496,4 @@ body {
 
 .subtask-item.drag-over-bottom {
     border-bottom: 2px solid #4a00e0 !important;
-}
-
-/* Убираем старые зоны сброса (они больше не нужны) */
-.todo-drop-zone,
-.subtask-drop-zone {
-    display: none;
 }
