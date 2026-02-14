@@ -1380,6 +1380,30 @@
             }
         }, 2000);
     </script>
+    <script>
+        function fixAppWidth() {
+            const app = document.getElementById('app');
+            if (!app) return;
+
+            // Получаем актуальные отступы body
+            const bodyStyles = window.getComputedStyle(document.body);
+            const paddingLeft = parseFloat(bodyStyles.paddingLeft) || 0;
+            const paddingRight = parseFloat(bodyStyles.paddingRight) || 0;
+
+            // Доступная ширина = ширина окна минус горизонтальные padding'и body
+            const availableWidth = window.innerWidth - paddingLeft - paddingRight;
+
+            // Ограничиваем максимальной шириной 500px (как в CSS)
+            const newWidth = Math.min(availableWidth, 500);
+
+            // Применяем ширину
+            app.style.width = newWidth + 'px';
+        }
+
+        // Запускаем при загрузке и при изменении размера окна
+        window.addEventListener('load', fixAppWidth);
+        window.addEventListener('resize', fixAppWidth);
+    </script>
 </body>
 
 </html>
