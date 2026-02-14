@@ -830,6 +830,7 @@ body {
     display: flex;
     gap: 5px;
     margin-left: 10px;
+    margin-right: 12px;
     position: relative;
 }
 
@@ -1463,10 +1464,12 @@ body {
 .drag-handle {
     cursor: move;
     color: #aaa;
-    margin-right: 8px;
     display: flex;
     align-items: center;
     user-select: none;
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
 }
 
 .drag-handle:hover {
