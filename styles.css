@@ -1458,3 +1458,24 @@ body {
 .todo-list-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* ===== НОВЫЕ СТИЛИ ДЛЯ DRAG & DROP ===== */
+.drag-handle {
+    cursor: move;
+    color: #aaa;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    user-select: none;
+}
+
+.drag-handle:hover {
+    color: #333;
+}
+
+.todo-drop-zone,
+.subtask-drop-zone {
+    height: 10px;
+    margin: 5px 0;
+    background: transparent;
+}

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -598,6 +597,105 @@
                 }
             };
 
+            // ========== DRAG & DROP ==========
+            const handleDragOver = (e) => {
+                e.preventDefault(); // обязательно для разрешения сброса
+            };
+
+            // Задачи
+            const handleTodoDragStart = (e, todoId) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'todo', id: todoId }));
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleTodoDrop = (e, targetTodoId) => {
+                e.preventDefault();
+                const dataStr = e.dataTransfer.getData('text/plain');
+                if (!dataStr) return;
+                const data = JSON.parse(dataStr);
+                if (data.type !== 'todo') return; // подзадачи нельзя сбросить на задачу
+                if (data.id === targetTodoId) return; // нельзя сбросить на себя
+
+                const sourceIdx = todos.findIndex(t => t.id === data.id);
+                const targetIdx = todos.findIndex(t => t.id === targetTodoId);
+                if (sourceIdx === -1 || targetIdx === -1) return;
+
+                const newTodos = [...todos];
+                const [movedTodo] = newTodos.splice(sourceIdx, 1);
+                // корректируем индекс вставки, если элемент удалён раньше целевого
+                const adjustedTargetIdx = targetIdx > sourceIdx ? targetIdx - 1 : targetIdx;
+                newTodos.splice(adjustedTargetIdx, 0, movedTodo);
+                setTodos(newTodos);
+            };
+
+            const handleTodoDropEnd = (e) => {
+                e.preventDefault();
+                const dataStr = e.dataTransfer.getData('text/plain');
+                if (!dataStr) return;
+                const data = JSON.parse(dataStr);
+                if (data.type !== 'todo') return;
+
+                const sourceIdx = todos.findIndex(t => t.id === data.id);
+                if (sourceIdx === -1) return;
+
+                const newTodos = [...todos];
+                const [movedTodo] = newTodos.splice(sourceIdx, 1);
+                newTodos.push(movedTodo); // вставляем в конец
+                setTodos(newTodos);
+            };
+
+            // Подзадачи
+            const handleSubtaskDragStart = (e, todoId, subtaskId) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'subtask', todoId, id: subtaskId }));
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleSubtaskDrop = (e, targetTodoId, targetSubtaskId) => {
+                e.preventDefault();
+                const dataStr = e.dataTransfer.getData('text/plain');
+                if (!dataStr) return;
+                const data = JSON.parse(dataStr);
+                if (data.type !== 'subtask') return;
+                if (data.todoId !== targetTodoId) return; // только внутри своей задачи
+                if (data.id === targetSubtaskId) return; // нельзя сбросить на себя
+
+                setTodos(prevTodos => prevTodos.map(todo => {
+                    if (todo.id !== targetTodoId) return todo;
+
+                    const subtasks = todo.subtasks;
+                    const sourceIdx = subtasks.findIndex(s => s.id === data.id);
+                    const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
+                    if (sourceIdx === -1 || targetIdx === -1) return todo;
+
+                    const newSubtasks = [...subtasks];
+                    const [moved] = newSubtasks.splice(sourceIdx, 1);
+                    const adjustedTargetIdx = targetIdx > sourceIdx ? targetIdx - 1 : targetIdx;
+                    newSubtasks.splice(adjustedTargetIdx, 0, moved);
+                    return { ...todo, subtasks: newSubtasks };
+                }));
+            };
+
+            const handleSubtaskDropEnd = (e, targetTodoId) => {
+                e.preventDefault();
+                const dataStr = e.dataTransfer.getData('text/plain');
+                if (!dataStr) return;
+                const data = JSON.parse(dataStr);
+                if (data.type !== 'subtask' || data.todoId !== targetTodoId) return;
+
+                setTodos(prevTodos => prevTodos.map(todo => {
+                    if (todo.id !== targetTodoId) return todo;
+
+                    const subtasks = todo.subtasks;
+                    const sourceIdx = subtasks.findIndex(s => s.id === data.id);
+                    if (sourceIdx === -1) return todo;
+
+                    const newSubtasks = [...subtasks];
+                    const [moved] = newSubtasks.splice(sourceIdx, 1);
+                    newSubtasks.push(moved); // в конец
+                    return { ...todo, subtasks: newSubtasks };
+                }));
+            };
+
             return (
                 <div id="app">
                     {/* Шапка */}
@@ -628,23 +726,6 @@
                         </div>
                     </div>
 
-                    {/* Статистика */}
-                    {/*
-                    <div className="stats">
-                        <div className="stat-box">
-                            <div className="stat-number">{todos.length}</div>
-                            <div className="stat-label">Всего задач</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-number">{activeCount}</div>
-                            <div className="stat-label">Активных</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-number">{completedCount}</div>
-                            <div className="stat-label">Выполнено</div>
-                        </div>
-                    </div>
-*/}
                     {/* Десктопное поле ввода (скрывается на мобильных) */}
                     <div className="input-container">
                         <input
@@ -692,11 +773,34 @@
                                     const subtaskStats = getSubtaskStats(todo);
                                     const isTodoMenuOpen = openMenuId === todo.id;
                                     return (
-                                        <div key={todo.id} className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}>
+                                        <div
+                                            key={todo.id}
+                                            className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}
+                                            onDrop={(e) => handleTodoDrop(e, todo.id)}
+                                            onDragOver={handleDragOver}
+                                        >
                                             <div className="todo-main">
                                                 <div className="todo-left">
-                                                    <input type="checkbox" className="todo-checkbox" checked={todo.completed} onChange={() => toggleComplete(todo.id)} />
-                                                    <div className="todo-expand" onClick={(e) => toggleTodoExpanded(todo.id, e)} title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}>
+                                                    {/* Ручка перетаскивания задачи */}
+                                                    <div
+                                                        className="drag-handle"
+                                                        draggable="true"
+                                                        onDragStart={(e) => handleTodoDragStart(e, todo.id)}
+                                                    >
+                                                        <i className="fas fa-grip-vertical"></i>
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="todo-checkbox"
+                                                        checked={todo.completed}
+                                                        onChange={() => toggleComplete(todo.id)}
+                                                        draggable="false"
+                                                    />
+                                                    <div
+                                                        className="todo-expand"
+                                                        onClick={(e) => toggleTodoExpanded(todo.id, e)}
+                                                        title={todo.isExpanded ? "Скрыть подзадачи" : "Показать подзадачи"}
+                                                    >
                                                         <i className={`fas fa-chevron-${todo.isExpanded ? 'down' : 'up'}`}></i>
                                                     </div>
                                                     <div className="todo-text">
@@ -711,7 +815,10 @@
                                                                 ></textarea>
                                                             </div>
                                                         ) : (
-                                                            <div className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`} onDoubleClick={(e) => startEditTodo(todo.id, todo.text, e)}>
+                                                            <div
+                                                                className={`todo-text-main ${todo.completed ? 'todo-completed-text' : ''}`}
+                                                                onDoubleClick={(e) => startEditTodo(todo.id, todo.text, e)}
+                                                            >
                                                                 {todo.text}
                                                             </div>
                                                         )}
@@ -757,13 +864,32 @@
                                             {todo.isExpanded && (
                                                 <div className="subtasks-accordion">
                                                     <div className="subtasks-content">
-                                                        {todo.subtasks.length > 0 ? (
-                                                            <div className="subtasks-list">
-                                                                {todo.subtasks.map(subtask => {
+                                                        <div className="subtasks-list">
+                                                            {todo.subtasks.length > 0 ? (
+                                                                todo.subtasks.map(subtask => {
                                                                     const isSubtaskMenuOpen = openSubtaskMenuId === `${todo.id}-${subtask.id}`;
                                                                     return (
-                                                                        <div key={subtask.id} className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}>
-                                                                            <input type="checkbox" className="subtask-checkbox" checked={subtask.completed} onChange={() => toggleSubtaskComplete(todo.id, subtask.id)} />
+                                                                        <div
+                                                                            key={subtask.id}
+                                                                            className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}
+                                                                            onDrop={(e) => handleSubtaskDrop(e, todo.id, subtask.id)}
+                                                                            onDragOver={handleDragOver}
+                                                                        >
+                                                                            {/* Ручка перетаскивания подзадачи */}
+                                                                            <div
+                                                                                className="drag-handle"
+                                                                                draggable="true"
+                                                                                onDragStart={(e) => handleSubtaskDragStart(e, todo.id, subtask.id)}
+                                                                            >
+                                                                                <i className="fas fa-grip-vertical"></i>
+                                                                            </div>
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="subtask-checkbox"
+                                                                                checked={subtask.completed}
+                                                                                onChange={() => toggleSubtaskComplete(todo.id, subtask.id)}
+                                                                                draggable="false"
+                                                                            />
                                                                             {subtask.isEditing ? (
                                                                                 <div className="subtask-edit-form">
                                                                                     <textarea
@@ -780,7 +906,10 @@
                                                                                     ></textarea>
                                                                                 </div>
                                                                             ) : (
-                                                                                <div className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`} onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}>
+                                                                                <div
+                                                                                    className={`subtask-text ${subtask.completed ? 'subtask-completed-text' : ''}`}
+                                                                                    onDoubleClick={(e) => startEditSubtask(todo.id, subtask.id, subtask.text, e)}
+                                                                                >
                                                                                     {subtask.text}
                                                                                 </div>
                                                                             )}
@@ -804,11 +933,17 @@
                                                                             </div>
                                                                         </div>
                                                                     );
-                                                                })}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="no-subtasks"><i className="fas fa-inbox"></i><span>Нет подзадач</span></div>
-                                                        )}
+                                                                })
+                                                            ) : (
+                                                                <div className="no-subtasks"><i className="fas fa-inbox"></i><span>Нет подзадач</span></div>
+                                                            )}
+                                                            {/* Зона сброса в конец списка подзадач */}
+                                                            <div
+                                                                className="subtask-drop-zone"
+                                                                onDrop={(e) => handleSubtaskDropEnd(e, todo.id)}
+                                                                onDragOver={handleDragOver}
+                                                            ></div>
+                                                        </div>
                                                         {/* Добавление новой подзадачи */}
                                                         <div className="add-subtask-form">
                                                             <input
@@ -828,6 +963,12 @@
                                     );
                                 })
                             )}
+                            {/* Зона сброса задачи в конец списка */}
+                            <div
+                                className="todo-drop-zone"
+                                onDrop={handleTodoDropEnd}
+                                onDragOver={handleDragOver}
+                            ></div>
                         </div>
                     </div>
 
@@ -1186,5 +1327,4 @@
         }, 2000);
     </script>
 </body>
-
 </html>
