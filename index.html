@@ -597,103 +597,134 @@
                 }
             };
 
-            // ========== DRAG & DROP ==========
+            // ========== УЛУЧШЕННЫЙ DRAG & DROP ==========
+            const [draggedItem, setDraggedItem] = useState(null);
+            const [dragOverTarget, setDragOverTarget] = useState({ type: null, id: null, position: null });
+
             const handleDragOver = (e) => {
-                e.preventDefault(); // обязательно для разрешения сброса
+                e.preventDefault();
             };
 
             // Задачи
             const handleTodoDragStart = (e, todoId) => {
                 e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'todo', id: todoId }));
                 e.dataTransfer.effectAllowed = 'move';
+                setDraggedItem({ type: 'todo', id: todoId });
+            };
+
+            const handleTodoDragOver = (e, targetTodoId) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem.type !== 'todo' || draggedItem.id === targetTodoId) return;
+
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const position = mouseY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+
+                setDragOverTarget({ type: 'todo', id: targetTodoId, position });
             };
 
             const handleTodoDrop = (e, targetTodoId) => {
                 e.preventDefault();
-                const dataStr = e.dataTransfer.getData('text/plain');
-                if (!dataStr) return;
-                const data = JSON.parse(dataStr);
-                if (data.type !== 'todo') return; // подзадачи нельзя сбросить на задачу
-                if (data.id === targetTodoId) return; // нельзя сбросить на себя
+                if (!draggedItem || draggedItem.type !== 'todo') {
+                    setDraggedItem(null);
+                    setDragOverTarget({ type: null, id: null, position: null });
+                    return;
+                }
 
-                const sourceIdx = todos.findIndex(t => t.id === data.id);
-                const targetIdx = todos.findIndex(t => t.id === targetTodoId);
-                if (sourceIdx === -1 || targetIdx === -1) return;
+                // Сохраняем данные из события синхронно
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const sourceId = draggedItem.id;
 
-                const newTodos = [...todos];
-                const [movedTodo] = newTodos.splice(sourceIdx, 1);
-                // корректируем индекс вставки, если элемент удалён раньше целевого
-                const adjustedTargetIdx = targetIdx > sourceIdx ? targetIdx - 1 : targetIdx;
-                newTodos.splice(adjustedTargetIdx, 0, movedTodo);
-                setTodos(newTodos);
-            };
+                setTodos(prevTodos => {
+                    const sourceIdx = prevTodos.findIndex(t => t.id === sourceId);
+                    const targetIdx = prevTodos.findIndex(t => t.id === targetTodoId);
+                    if (sourceIdx === -1 || targetIdx === -1) return prevTodos;
 
-            const handleTodoDropEnd = (e) => {
-                e.preventDefault();
-                const dataStr = e.dataTransfer.getData('text/plain');
-                if (!dataStr) return;
-                const data = JSON.parse(dataStr);
-                if (data.type !== 'todo') return;
+                    const insertBefore = mouseY < rect.top + rect.height / 2;
 
-                const sourceIdx = todos.findIndex(t => t.id === data.id);
-                if (sourceIdx === -1) return;
+                    const newTodos = [...prevTodos];
+                    const [movedTodo] = newTodos.splice(sourceIdx, 1);
 
-                const newTodos = [...todos];
-                const [movedTodo] = newTodos.splice(sourceIdx, 1);
-                newTodos.push(movedTodo); // вставляем в конец
-                setTodos(newTodos);
+                    let adjustedTargetIdx = targetIdx;
+                    if (sourceIdx < targetIdx) adjustedTargetIdx--;
+
+                    const insertIdx = insertBefore ? adjustedTargetIdx : adjustedTargetIdx + 1;
+                    newTodos.splice(insertIdx, 0, movedTodo);
+
+                    return newTodos;
+                });
+
+                setDraggedItem(null);
+                setDragOverTarget({ type: null, id: null, position: null });
             };
 
             // Подзадачи
             const handleSubtaskDragStart = (e, todoId, subtaskId) => {
                 e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'subtask', todoId, id: subtaskId }));
                 e.dataTransfer.effectAllowed = 'move';
+                setDraggedItem({ type: 'subtask', todoId, id: subtaskId });
+            };
+
+            const handleSubtaskDragOver = (e, targetTodoId, targetSubtaskId) => {
+                e.preventDefault();
+                if (!draggedItem || draggedItem.type !== 'subtask' || draggedItem.todoId !== targetTodoId || draggedItem.id === targetSubtaskId) return;
+
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const position = mouseY < rect.top + rect.height / 2 ? 'top' : 'bottom';
+
+                setDragOverTarget({ type: 'subtask', todoId: targetTodoId, id: targetSubtaskId, position });
             };
 
             const handleSubtaskDrop = (e, targetTodoId, targetSubtaskId) => {
                 e.preventDefault();
-                const dataStr = e.dataTransfer.getData('text/plain');
-                if (!dataStr) return;
-                const data = JSON.parse(dataStr);
-                if (data.type !== 'subtask') return;
-                if (data.todoId !== targetTodoId) return; // только внутри своей задачи
-                if (data.id === targetSubtaskId) return; // нельзя сбросить на себя
+                if (!draggedItem || draggedItem.type !== 'subtask' || draggedItem.todoId !== targetTodoId) {
+                    setDraggedItem(null);
+                    setDragOverTarget({ type: null, id: null, position: null });
+                    return;
+                }
 
-                setTodos(prevTodos => prevTodos.map(todo => {
-                    if (todo.id !== targetTodoId) return todo;
+                // Сохраняем данные из события синхронно
+                const rect = e.currentTarget.getBoundingClientRect();
+                const mouseY = e.clientY;
+                const sourceId = draggedItem.id;
 
-                    const subtasks = todo.subtasks;
-                    const sourceIdx = subtasks.findIndex(s => s.id === data.id);
-                    const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
-                    if (sourceIdx === -1 || targetIdx === -1) return todo;
+                setTodos(prevTodos => {
+                    return prevTodos.map(todo => {
+                        if (todo.id !== targetTodoId) return todo;
 
-                    const newSubtasks = [...subtasks];
-                    const [moved] = newSubtasks.splice(sourceIdx, 1);
-                    const adjustedTargetIdx = targetIdx > sourceIdx ? targetIdx - 1 : targetIdx;
-                    newSubtasks.splice(adjustedTargetIdx, 0, moved);
-                    return { ...todo, subtasks: newSubtasks };
-                }));
+                        const subtasks = todo.subtasks;
+                        const sourceIdx = subtasks.findIndex(s => s.id === sourceId);
+                        const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
+                        if (sourceIdx === -1 || targetIdx === -1) return todo;
+
+                        const insertBefore = mouseY < rect.top + rect.height / 2;
+
+                        const newSubtasks = [...subtasks];
+                        const [moved] = newSubtasks.splice(sourceIdx, 1);
+
+                        let adjustedTargetIdx = targetIdx;
+                        if (sourceIdx < targetIdx) adjustedTargetIdx--;
+
+                        const insertIdx = insertBefore ? adjustedTargetIdx : adjustedTargetIdx + 1;
+                        if (insertIdx < 0 || insertIdx > newSubtasks.length) {
+                            console.error('Некорректный индекс вставки:', insertIdx);
+                            return todo;
+                        }
+
+                        newSubtasks.splice(insertIdx, 0, moved);
+                        return { ...todo, subtasks: newSubtasks };
+                    });
+                });
+
+                setDraggedItem(null);
+                setDragOverTarget({ type: null, id: null, position: null });
             };
 
-            const handleSubtaskDropEnd = (e, targetTodoId) => {
-                e.preventDefault();
-                const dataStr = e.dataTransfer.getData('text/plain');
-                if (!dataStr) return;
-                const data = JSON.parse(dataStr);
-                if (data.type !== 'subtask' || data.todoId !== targetTodoId) return;
-
-                setTodos(prevTodos => prevTodos.map(todo => {
-                    if (todo.id !== targetTodoId) return todo;
-
-                    const subtasks = todo.subtasks;
-                    const sourceIdx = subtasks.findIndex(s => s.id === data.id);
-                    if (sourceIdx === -1) return todo;
-
-                    const newSubtasks = [...subtasks];
-                    const [moved] = newSubtasks.splice(sourceIdx, 1);
-                    newSubtasks.push(moved); // в конец
-                    return { ...todo, subtasks: newSubtasks };
-                }));
+            const handleDragEnd = () => {
+                setDraggedItem(null);
+                setDragOverTarget({ type: null, id: null, position: null });
             };
 
             return (
@@ -775,9 +806,13 @@
                                     return (
                                         <div
                                             key={todo.id}
-                                            className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''}`}
+                                            className={`todo-item ${todo.completed ? 'completed' : ''} ${isTodoMenuOpen ? 'menu-open' : ''} ${
+                                                draggedItem?.type === 'todo' && draggedItem.id === todo.id ? 'dragging' : ''
+                                            } ${
+                                                dragOverTarget.type === 'todo' && dragOverTarget.id === todo.id ? `drag-over-${dragOverTarget.position}` : ''
+                                            }`}
                                             onDrop={(e) => handleTodoDrop(e, todo.id)}
-                                            onDragOver={handleDragOver}
+                                            onDragOver={(e) => handleTodoDragOver(e, todo.id)}
                                         >
                                             <div className="todo-main">
                                                 <div className="todo-left">
@@ -786,6 +821,7 @@
                                                         className="drag-handle"
                                                         draggable="true"
                                                         onDragStart={(e) => handleTodoDragStart(e, todo.id)}
+                                                        onDragEnd={handleDragEnd}
                                                     >
                                                         <i className="fas fa-grip-vertical"></i>
                                                     </div>
@@ -871,15 +907,20 @@
                                                                     return (
                                                                         <div
                                                                             key={subtask.id}
-                                                                            className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''}`}
+                                                                            className={`subtask-item ${subtask.completed ? 'completed' : ''} ${isSubtaskMenuOpen ? 'menu-open' : ''} ${
+                                                                                draggedItem?.type === 'subtask' && draggedItem.id === subtask.id ? 'dragging' : ''
+                                                                            } ${
+                                                                                dragOverTarget.type === 'subtask' && dragOverTarget.todoId === todo.id && dragOverTarget.id === subtask.id ? `drag-over-${dragOverTarget.position}` : ''
+                                                                            }`}
                                                                             onDrop={(e) => handleSubtaskDrop(e, todo.id, subtask.id)}
-                                                                            onDragOver={handleDragOver}
+                                                                            onDragOver={(e) => handleSubtaskDragOver(e, todo.id, subtask.id)}
                                                                         >
                                                                             {/* Ручка перетаскивания подзадачи */}
                                                                             <div
                                                                                 className="drag-handle"
                                                                                 draggable="true"
                                                                                 onDragStart={(e) => handleSubtaskDragStart(e, todo.id, subtask.id)}
+                                                                                onDragEnd={handleDragEnd}
                                                                             >
                                                                                 <i className="fas fa-grip-vertical"></i>
                                                                             </div>
@@ -937,12 +978,6 @@
                                                             ) : (
                                                                 <div className="no-subtasks"><i className="fas fa-inbox"></i><span>Нет подзадач</span></div>
                                                             )}
-                                                            {/* Зона сброса в конец списка подзадач */}
-                                                            <div
-                                                                className="subtask-drop-zone"
-                                                                onDrop={(e) => handleSubtaskDropEnd(e, todo.id)}
-                                                                onDragOver={handleDragOver}
-                                                            ></div>
                                                         </div>
                                                         {/* Добавление новой подзадачи */}
                                                         <div className="add-subtask-form">
@@ -963,12 +998,6 @@
                                     );
                                 })
                             )}
-                            {/* Зона сброса задачи в конец списка */}
-                            <div
-                                className="todo-drop-zone"
-                                onDrop={handleTodoDropEnd}
-                                onDragOver={handleDragOver}
-                            ></div>
                         </div>
                     </div>
 
@@ -987,7 +1016,7 @@
                         )}
                     </div>
 
-                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: ФУТЕР С КНОПКАМИ (СТИЛЬНЫЙ GLASSMORPHISM) ----- */}
+                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: ФУТЕР С КНОПКАМИ ----- */}
                     <div className="mobile-footer">
                         <div className="mobile-footer-left">
                             <div id="pwa-footer-button"></div>
