@@ -113,6 +113,14 @@
                 return () => document.removeEventListener('click', handleClickOutside);
             }, [openMenuId, openSubtaskMenuId]);
 
+            useEffect(() => {
+                // Пересчитываем ширину при любом изменении списка задач
+                if (window.fixAppWidth) {
+                    // Даём время React обновить DOM
+                    setTimeout(window.fixAppWidth, 50);
+                }
+            }, [todos]); // todos — это состояние списка задач
+
             // Показ уведомления
             const showNotification = (message) => {
                 setNotification(message);
@@ -1098,23 +1106,38 @@
             const app = document.getElementById('app');
             if (!app) return;
 
-            // Получаем актуальные отступы body (могут меняться в медиа-запросах)
+            // Получаем отступы body (могут меняться в медиа-запросах)
             const bodyStyles = window.getComputedStyle(document.body);
             const paddingLeft = parseFloat(bodyStyles.paddingLeft) || 0;
             const paddingRight = parseFloat(bodyStyles.paddingRight) || 0;
 
-            // Используем clientWidth, чтобы исключить влияние полосы прокрутки
-            const availableWidth = document.documentElement.clientWidth - paddingLeft - paddingRight;
+            // Используем visualViewport для более точной ширины (особенно на iOS)
+            let viewportWidth;
+            if (window.visualViewport) {
+                viewportWidth = window.visualViewport.width;
+            } else {
+                viewportWidth = document.documentElement.clientWidth;
+            }
+
+            const availableWidth = viewportWidth - paddingLeft - paddingRight;
             const maxWidth = 500; // должно совпадать с max-width из CSS
 
             const newWidth = Math.min(availableWidth, maxWidth);
             app.style.width = newWidth + 'px';
         };
 
-        // Вызываем при загрузке и изменении размера окна
+        // Вызываем при загрузке и всех изменениях размера
         window.addEventListener('load', window.fixAppWidth);
         window.addEventListener('resize', window.fixAppWidth);
         window.addEventListener('orientationchange', window.fixAppWidth);
+
+        // Слушаем изменения visualViewport (если поддерживается)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', window.fixAppWidth);
+        }
+
+        // Дополнительный вызов через 100 мс, чтобы учесть возможные задержки рендеринга
+        setTimeout(window.fixAppWidth, 100);
 
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
@@ -1214,7 +1237,7 @@
             // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
                 // Небольшая задержка, чтобы браузер обновил геометрию
-                setTimeout(window.fixAppWidth, 100);
+                setTimeout(window.fixAppWidth, 200);
             }
 
             console.log('Кнопка создана: установлено =', isAppInstalled());
@@ -1344,7 +1367,7 @@
             // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
                 // Небольшая задержка, чтобы браузер обновил геометрию
-                setTimeout(window.fixAppWidth, 100);
+                setTimeout(window.fixAppWidth, 200);
             }
         });
 
@@ -1356,7 +1379,7 @@
             // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
                 // Небольшая задержка, чтобы браузер обновил геометрию
-                setTimeout(window.fixAppWidth, 100);
+                setTimeout(window.fixAppWidth, 200);
             }
             deferredPrompt = null;
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
