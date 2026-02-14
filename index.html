@@ -1093,6 +1093,29 @@
             );
         }
 
+        // Глобальная функция для корректировки ширины #app
+        window.fixAppWidth = function () {
+            const app = document.getElementById('app');
+            if (!app) return;
+
+            // Получаем актуальные отступы body (могут меняться в медиа-запросах)
+            const bodyStyles = window.getComputedStyle(document.body);
+            const paddingLeft = parseFloat(bodyStyles.paddingLeft) || 0;
+            const paddingRight = parseFloat(bodyStyles.paddingRight) || 0;
+
+            // Используем clientWidth, чтобы исключить влияние полосы прокрутки
+            const availableWidth = document.documentElement.clientWidth - paddingLeft - paddingRight;
+            const maxWidth = 500; // должно совпадать с max-width из CSS
+
+            const newWidth = Math.min(availableWidth, maxWidth);
+            app.style.width = newWidth + 'px';
+        };
+
+        // Вызываем при загрузке и изменении размера окна
+        window.addEventListener('load', window.fixAppWidth);
+        window.addEventListener('resize', window.fixAppWidth);
+        window.addEventListener('orientationchange', window.fixAppWidth);
+
         const container = document.getElementById('root');
         const root = ReactDOM.createRoot(container);
         root.render(React.createElement(TodoApp));
@@ -1186,6 +1209,12 @@
                 }
             } else {
                 document.body.appendChild(installButton);
+            }
+
+            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+            if (window.fixAppWidth) {
+                // Небольшая задержка, чтобы браузер обновил геометрию
+                setTimeout(window.fixAppWidth, 50);
             }
 
             console.log('Кнопка создана: установлено =', isAppInstalled());
@@ -1312,6 +1341,11 @@
             e.preventDefault();
             deferredPrompt = e;
             if (!isStandalone()) createInstallButton();
+            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+            if (window.fixAppWidth) {
+                // Небольшая задержка, чтобы браузер обновил геометрию
+                setTimeout(window.fixAppWidth, 50);
+            }
         });
 
         window.addEventListener('appinstalled', (evt) => {
@@ -1319,6 +1353,11 @@
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
             if (!isStandalone()) createInstallButton();
+            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+            if (window.fixAppWidth) {
+                // Небольшая задержка, чтобы браузер обновил геометрию
+                setTimeout(window.fixAppWidth, 50);
+            }
             deferredPrompt = null;
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
