@@ -1288,22 +1288,19 @@
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
-                    // Помечаем, что приложение установлено (даже если событие appinstalled ещё не пришло)
-                    appInstalled = true;
-                    localStorage.setItem('pwaInstalled', 'true');
-
-                    // Сразу обновляем кнопку, если она существует и мы не в standalone-режиме
-                    if (!isStandalone() && installButton) {
-                        updateInstallButton();
-                    } else {
-                        createInstallButton();
-                    }
-
-                    showNotification('Приложение устанавливается...');
+                    // НЕ помечаем приложение как установленное сразу
+                    // Ждём события appinstalled
+                    // Оставляем кнопку в состоянии "Установка..." до получения подтверждения
+                    // Если через некоторое время событие не пришло – вернём кнопку обратно
+                    setTimeout(() => {
+                        if (installButton && installButton.innerHTML.includes('spinner') && !appInstalled) {
+                            // Возвращаем кнопку в исходное состояние, если установка не подтвердилась
+                            updateInstallButton();
+                        }
+                    }, 10000); // 10 секунд таймаут
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
-                    // Возвращаем кнопку в исходное состояние
                     if (installButton) {
                         updateInstallButton();
                     } else {
