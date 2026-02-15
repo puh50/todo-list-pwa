@@ -34,26 +34,112 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        function TodoApp() {
-            // ========== ЗАГРУЗКА СОХРАНЁННЫХ ЗАДАЧ ==========
-            const loadTodos = () => {
-                const savedTodos = localStorage.getItem('todos');
-                if (savedTodos) {
-                    const todos = JSON.parse(savedTodos);
-                    return todos.map(todo => ({
-                        ...todo,
-                        subtasks: todo.subtasks || [],
-                        isExpanded: todo.isExpanded || false,
-                        completedAt: todo.completedAt || null,
-                        isEditing: false,
-                        editingText: todo.text,
-                        isMenuOpen: false
-                    }));
-                }
-                return [];
-            };
+        // Настройки по умолчанию
+        const defaultSettings = {
+            // Общие (фон приложения #app)
+            appTransparent: false,
+            backgroundType: 'gradient',
+            backgroundColor: '#6a11cb',
+            backgroundGradient: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+            backgroundImage: null,
+            textColor: '#333333',
 
-            const [todos, setTodos] = useState(loadTodos);
+            // Фон body (внешний)
+            bodyBackgroundType: 'gradient',
+            bodyBackgroundColor: '#6a11cb',
+            bodyBackgroundGradient: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+            bodyBackgroundImage: null,
+
+            // Шапка
+            headerUseGlobal: true,
+            headerTransparent: false,
+            headerBackground: '',
+            headerTextColor: '',
+            headerGradientColor1: '#4a00e0',
+            headerGradientColor2: '#8e2de2',
+
+            // Блок импорта/экспорта
+            importUseGlobal: true,
+            importTransparent: false,
+            importSectionBackground: '',
+            importSectionTextColor: '',
+            importGradientColor1: '#4a00e0',
+            importGradientColor2: '#8e2de2',
+
+            // Список задач (контейнер)
+            todoListTransparent: false,
+
+            // Карточки задач
+            todoItemUseGlobal: true,
+            todoItemTransparent: false,
+            todoItemBackground: '#ffffff',
+            todoItemTextColor: '#333333',
+            todoItemMetaTextColor: '#666666',  // новый цвет для метаданных
+
+            // Подзадачи
+            subtaskItemUseGlobal: true,
+            subtaskItemTransparent: false,
+            subtaskItemBackground: '#f8f9fa',
+            subtaskItemTextColor: '#495057'
+        };
+
+        // Загрузка данных из localStorage
+        const loadTodosAndSettings = () => {
+            const savedData = localStorage.getItem('todos');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (Array.isArray(parsed)) {
+                        return {
+                            todos: parsed.map(todo => ({
+                                ...todo,
+                                subtasks: todo.subtasks || [],
+                                isExpanded: todo.isExpanded || false,
+                                completedAt: todo.completedAt || null,
+                                isEditing: false,
+                                editingText: todo.text,
+                                isMenuOpen: false
+                            })),
+                            settings: defaultSettings,
+                            lastModified: new Date().toISOString(),
+                            version: '3.2',
+                            format: 'todo-with-settings'
+                        };
+                    }
+                    if (parsed.todos && Array.isArray(parsed.todos)) {
+                        return {
+                            todos: parsed.todos.map(todo => ({
+                                ...todo,
+                                subtasks: todo.subtasks || [],
+                                isExpanded: todo.isExpanded || false,
+                                completedAt: todo.completedAt || null,
+                                isEditing: false,
+                                editingText: todo.text,
+                                isMenuOpen: false
+                            })),
+                            settings: { ...defaultSettings, ...(parsed.settings || {}) },
+                            lastModified: parsed.lastModified || new Date().toISOString(),
+                            version: parsed.version || '3.2',
+                            format: parsed.format || 'todo-with-settings'
+                        };
+                    }
+                } catch (e) {
+                    console.error('Ошибка загрузки данных', e);
+                }
+            }
+            return {
+                todos: [],
+                settings: defaultSettings,
+                lastModified: new Date().toISOString(),
+                version: '3.2',
+                format: 'todo-with-settings'
+            };
+        };
+
+        function TodoApp() {
+            const [appData, setAppData] = useState(loadTodosAndSettings);
+            const [todos, setTodos] = useState(appData.todos);
+            const [settings, setSettings] = useState(appData.settings);
             const [newTodo, setNewTodo] = useState('');
             const [newSubtaskTexts, setNewSubtaskTexts] = useState({});
             const [filter, setFilter] = useState('all');
@@ -68,27 +154,63 @@
             const [openSubtaskMenuId, setOpenSubtaskMenuId] = useState(null);
             const menuRefs = useRef({});
 
-            // ----- МОБИЛЬНЫЕ СОСТОЯНИЯ -----
             const [mobileAddMode, setMobileAddMode] = useState(false);
             const [mobileNewTodo, setMobileNewTodo] = useState('');
-            // --------------------------------
 
-            // Сохранение задач в локальное хранилище при изменении
+            const [showSettings, setShowSettings] = useState(false);
+            const [tempSettings, setTempSettings] = useState(settings);
+            const [sections, setSections] = useState({
+                body: true,
+                app: true,
+                text: true,
+                header: true,
+                import: true,
+                todoItems: true,
+                subtasks: true,
+                todoList: true
+            });
+
+            const toggleSection = (section) => {
+                setSections(prev => ({ ...prev, [section]: !prev[section] }));
+            };
+
             useEffect(() => {
-                localStorage.setItem('todos', JSON.stringify(todos));
+                const applyBodyStyle = () => {
+                    let bodyStyle = '';
+                    if (settings.bodyBackgroundType === 'gradient') {
+                        bodyStyle = settings.bodyBackgroundGradient;
+                    } else if (settings.bodyBackgroundType === 'color') {
+                        bodyStyle = settings.bodyBackgroundColor;
+                    } else if (settings.bodyBackgroundType === 'image' && settings.bodyBackgroundImage) {
+                        bodyStyle = `url(${settings.bodyBackgroundImage}) center/cover no-repeat`;
+                    } else {
+                        bodyStyle = 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)';
+                    }
+                    document.body.style.background = bodyStyle;
+                };
+                applyBodyStyle();
+            }, [settings.bodyBackgroundType, settings.bodyBackgroundColor, settings.bodyBackgroundGradient, settings.bodyBackgroundImage]);
+
+            useEffect(() => {
+                const dataToSave = {
+                    todos: todos,
+                    settings: settings,
+                    lastModified: new Date().toISOString(),
+                    version: '3.2',
+                    format: 'todo-with-settings'
+                };
+                localStorage.setItem('todos', JSON.stringify(dataToSave));
                 if (lastOperation.type !== 'export' && lastOperation.type !== 'import') {
                     const newOperation = { type: 'save', time: new Date().toISOString() };
                     setLastOperation(newOperation);
                     localStorage.setItem('lastOperation', JSON.stringify(newOperation));
                 }
-            }, [todos]);
+            }, [todos, settings]);
 
-            // Сохранение последней операции
             useEffect(() => {
                 localStorage.setItem('lastOperation', JSON.stringify(lastOperation));
             }, [lastOperation]);
 
-            // Закрытие меню при клике вне его
             useEffect(() => {
                 const handleClickOutside = (event) => {
                     let isOutside = true;
@@ -114,26 +236,23 @@
             }, [openMenuId, openSubtaskMenuId]);
 
             useEffect(() => {
-                // Пересчитываем ширину при любом изменении списка задач
                 if (window.fixAppWidth) {
-                    // Даём время React обновить DOM
                     setTimeout(window.fixAppWidth, 500);
                 }
-            }, [todos]); // todos — это состояние списка задач
+            }, [todos]);
 
-            // Показ уведомления
             const showNotification = (message) => {
                 setNotification(message);
                 setTimeout(() => setNotification(null), 3000);
             };
 
-            // Экспорт задач в файл
             const exportToFile = () => {
                 const dataToSave = {
                     todos: todos,
+                    settings: settings,
                     lastModified: new Date().toISOString(),
-                    version: '2.0',
-                    format: 'todo-with-subtasks'
+                    version: '3.2',
+                    format: 'todo-with-settings'
                 };
                 const dataStr = JSON.stringify(dataToSave, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
@@ -147,7 +266,6 @@
                 showNotification('Задачи экспортированы в файл');
             };
 
-            // Импорт задач из файла
             const importFromFile = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -156,25 +274,20 @@
                     try {
                         const importedData = JSON.parse(e.target.result);
                         let importedTodos = [];
+                        let importedSettings = { ...defaultSettings };
+
                         if (importedData.todos && Array.isArray(importedData.todos)) {
-                            if (importedData.format === 'todo-with-subtasks' || importedData.version === '2.0') {
-                                importedTodos = importedData.todos;
-                            } else {
-                                importedTodos = importedData.todos.map(todo => ({
-                                    ...todo,
-                                    subtasks: [],
-                                    isExpanded: false,
-                                    completedAt: todo.completed ? new Date().toISOString() : null,
-                                    isEditing: false,
-                                    editingText: todo.text,
-                                    isMenuOpen: false
-                                }));
-                                showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
-                            }
-                            setTodos(importedTodos);
-                            const newOperation = { type: 'import', time: new Date().toISOString() };
-                            setLastOperation(newOperation);
-                            showNotification(`Импортировано ${importedTodos.length} задач из файла`);
+                            importedTodos = importedData.todos.map(todo => ({
+                                ...todo,
+                                subtasks: todo.subtasks || [],
+                                isExpanded: todo.isExpanded || false,
+                                completedAt: todo.completedAt || null,
+                                isEditing: false,
+                                editingText: todo.text,
+                                isMenuOpen: false
+                            }));
+                            importedSettings = importedData.settings ? { ...defaultSettings, ...importedData.settings } : defaultSettings;
+                            showNotification(`Импортировано ${importedTodos.length} задач`);
                         } else if (Array.isArray(importedData)) {
                             importedTodos = importedData.map(todo => ({
                                 ...todo,
@@ -185,13 +298,18 @@
                                 editingText: todo.text,
                                 isMenuOpen: false
                             }));
-                            setTodos(importedTodos);
-                            const newOperation = { type: 'import', time: new Date().toISOString() };
-                            setLastOperation(newOperation);
+                            importedSettings = defaultSettings;
                             showNotification(`Импортировано ${importedTodos.length} задач из старого формата`);
                         } else {
                             showNotification('Неверный формат файла');
+                            event.target.value = '';
+                            return;
                         }
+
+                        setTodos(importedTodos);
+                        setSettings(importedSettings);
+                        const newOperation = { type: 'import', time: new Date().toISOString() };
+                        setLastOperation(newOperation);
                         event.target.value = '';
                     } catch (error) {
                         console.error('Ошибка импорта:', error);
@@ -201,7 +319,6 @@
                 reader.readAsText(file);
             };
 
-            // Добавление новой задачи (общий метод)
             const addTodo = (text) => {
                 if (text.trim() === '') {
                     showNotification('Введите текст задачи');
@@ -225,7 +342,6 @@
                 return true;
             };
 
-            // ----- МОБИЛЬНЫЕ ОБРАБОТЧИКИ -----
             const handleMobileFabClick = () => {
                 if (!mobileAddMode) {
                     setMobileAddMode(true);
@@ -250,9 +366,7 @@
                 setMobileAddMode(false);
                 setMobileNewTodo('');
             };
-            // ---------------------------------------
 
-            // Переключение отображения подзадач
             const toggleTodoExpanded = (id, e) => {
                 if (e) e.stopPropagation();
                 setTodos(todos.map(todo => {
@@ -263,7 +377,6 @@
                 }));
             };
 
-            // Добавление подзадачи
             const addSubtask = (todoId) => {
                 const subtaskText = newSubtaskTexts[todoId] || '';
                 if (subtaskText.trim() === '') {
@@ -293,7 +406,6 @@
                 showNotification('Подзадача добавлена');
             };
 
-            // Удаление подзадачи
             const deleteSubtask = (todoId, subtaskId) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
@@ -307,7 +419,6 @@
                 showNotification('Подзадача удалена');
             };
 
-            // Переключение статуса подзадачи
             const toggleSubtaskComplete = (todoId, subtaskId) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === todoId) {
@@ -325,7 +436,6 @@
                 }));
             };
 
-            // Начало редактирования задачи
             const startEditTodo = (id, text, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenMenuId(null);
@@ -337,7 +447,6 @@
                 }));
             };
 
-            // Сохранение редактирования задачи
             const saveEditTodo = (id, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 const todo = todos.find(t => t.id === id);
@@ -356,7 +465,6 @@
                 showNotification('Задача обновлена');
             };
 
-            // Отмена редактирования задачи
             const cancelEditTodo = (id, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setTodos(todos.map(todo => {
@@ -367,7 +475,6 @@
                 }));
             };
 
-            // Начало редактирования подзадачи
             const startEditSubtask = (todoId, subtaskId, text, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenSubtaskMenuId(null);
@@ -387,7 +494,6 @@
                 }));
             };
 
-            // Сохранение редактирования подзадачи
             const saveEditSubtask = (todoId, subtaskId, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 const todo = todos.find(t => t.id === todoId);
@@ -416,7 +522,6 @@
                 showNotification('Подзадача обновлена');
             };
 
-            // Отмена редактирования подзадачи
             const cancelEditSubtask = (todoId, subtaskId, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setTodos(todos.map(todo => {
@@ -435,7 +540,6 @@
                 }));
             };
 
-            // Запрос на удаление задачи
             const requestDeleteTodo = (id, text, subtaskCount, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenMenuId(null);
@@ -454,7 +558,6 @@
                 setShowConfirm(true);
             };
 
-            // Запрос на удаление подзадачи
             const requestDeleteSubtask = (todoId, subtaskId, text, e) => {
                 if (e) { e.stopPropagation(); e.preventDefault(); }
                 setOpenSubtaskMenuId(null);
@@ -467,7 +570,6 @@
                 setShowConfirm(true);
             };
 
-            // Запрос на очистку выполненных задач
             const requestClearCompleted = () => {
                 const completedCount = todos.filter(todo => todo.completed).length;
                 if (completedCount === 0) {
@@ -486,13 +588,11 @@
                 setShowConfirm(true);
             };
 
-            // Закрытие окна подтверждения
             const closeConfirm = () => {
                 setShowConfirm(false);
                 setConfirmConfig(null);
             };
 
-            // Переключение статуса выполнения задачи
             const toggleComplete = (id) => {
                 setTodos(todos.map(todo => {
                     if (todo.id === id) {
@@ -508,14 +608,12 @@
                 }));
             };
 
-            // Открытие/закрытие меню задачи
             const toggleTodoMenu = (id, e) => {
                 if (e) e.stopPropagation();
                 setOpenMenuId(openMenuId === id ? null : id);
                 setOpenSubtaskMenuId(null);
             };
 
-            // Открытие/закрытие меню подзадачи
             const toggleSubtaskMenu = (todoId, subtaskId, e) => {
                 if (e) e.stopPropagation();
                 const menuId = `${todoId}-${subtaskId}`;
@@ -523,7 +621,6 @@
                 setOpenMenuId(null);
             };
 
-            // Получение ref для меню
             const getMenuRef = (type, id) => (ref) => {
                 if (ref) {
                     menuRefs.current[`${type}-${id}`] = ref;
@@ -532,18 +629,15 @@
                 }
             };
 
-            // Фильтрация задач
             const filteredTodos = todos.filter(todo => {
                 if (filter === 'active') return !todo.completed;
                 if (filter === 'completed') return todo.completed;
                 return true;
             });
 
-            // Статистика
             const completedCount = todos.filter(todo => todo.completed).length;
             const activeCount = todos.length - completedCount;
 
-            // Получение статистики по подзадачам для конкретной задачи
             const getSubtaskStats = (todo) => {
                 if (!todo.subtasks || todo.subtasks.length === 0) return null;
                 const completed = todo.subtasks.filter(subtask => subtask.completed).length;
@@ -551,34 +645,28 @@
                 return { completed, remaining: total - completed, total };
             };
 
-            // Обработка нажатия клавиши Enter для задачи
             const handleKeyPress = (e) => {
                 if (e.key === 'Enter') addTodo(newTodo);
             };
 
-            // Обработка нажатия клавиши Enter для подзадачи
             const handleSubtaskKeyPress = (e, todoId) => {
                 if (e.key === 'Enter') addSubtask(todoId);
             };
 
-            // Обработка нажатия клавиши для редактирования задачи
             const handleEditTodoKeyPress = (e, id) => {
                 if (e.key === 'Escape') cancelEditTodo(id, e);
             };
 
-            // Обработка нажатия клавиши для редактирования подзадачи
             const handleEditSubtaskKeyPress = (e, todoId, subtaskId) => {
                 if (e.key === 'Escape') cancelEditSubtask(todoId, subtaskId, e);
             };
 
-            // Форматирование даты
             const formatDate = (dateString) => {
                 if (!dateString) return '';
                 const date = new Date(dateString);
                 return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
             };
 
-            // Форматирование времени для статуса
             const formatTimeAgo = (dateString) => {
                 if (!dateString) return 'никогда';
                 const now = new Date();
@@ -597,7 +685,6 @@
                 return formatDate(dateString);
             };
 
-            // Получение текста для типа операции
             const getOperationText = (type) => {
                 switch (type) {
                     case 'save': return 'Сохранено';
@@ -607,35 +694,22 @@
                 }
             };
 
-            // ========== УЛУЧШЕННЫЙ DRAG & DROP ==========
             const [draggedItem, setDraggedItem] = useState(null);
             const [dragOverTarget, setDragOverTarget] = useState({ type: null, id: null, position: null });
 
-            const handleDragOver = (e) => {
-                e.preventDefault();
-            };
+            const handleDragOver = (e) => e.preventDefault();
 
-            // Проверка, является ли элемент интерактивным (чекбокс, кнопка, меню)
             const isInteractiveElement = (element) => {
                 const tag = element.tagName.toLowerCase();
-                const type = element.type;
-                return tag === 'input' ||
-                    tag === 'button' ||
-                    tag === 'textarea' ||
-                    tag === 'select' ||
-                    element.classList.contains('todo-menu-button') ||
-                    element.classList.contains('subtask-menu-button') ||
-                    element.classList.contains('edit-button') ||
-                    element.classList.contains('edit-cancel-button') ||
-                    element.classList.contains('edit-subtask-button') ||
-                    element.classList.contains('edit-cancel-subtask-button') ||
-                    element.closest('.todo-menu-dropdown') !== null ||
-                    element.closest('.subtask-menu-dropdown') !== null;
+                return tag === 'input' || tag === 'button' || tag === 'textarea' || tag === 'select' ||
+                    element.classList.contains('todo-menu-button') || element.classList.contains('subtask-menu-button') ||
+                    element.classList.contains('edit-button') || element.classList.contains('edit-cancel-button') ||
+                    element.classList.contains('edit-subtask-button') || element.classList.contains('edit-cancel-subtask-button') ||
+                    element.closest('.todo-menu-dropdown') !== null || element.closest('.subtask-menu-dropdown') !== null;
             };
 
-            // Задачи
             const handleTodoDragStart = (e, todoId) => {
-                e.stopPropagation(); // важно, чтобы событие не всплывало к родительским draggable элементам
+                e.stopPropagation();
                 if (isInteractiveElement(e.target)) {
                     e.preventDefault();
                     return;
@@ -648,11 +722,9 @@
             const handleTodoDragOver = (e, targetTodoId) => {
                 e.preventDefault();
                 if (!draggedItem || draggedItem.type !== 'todo' || draggedItem.id === targetTodoId) return;
-
                 const rect = e.currentTarget.getBoundingClientRect();
                 const mouseY = e.clientY;
                 const position = mouseY < rect.top + rect.height / 2 ? 'top' : 'bottom';
-
                 setDragOverTarget({ type: 'todo', id: targetTodoId, position });
             };
 
@@ -663,37 +735,28 @@
                     setDragOverTarget({ type: null, id: null, position: null });
                     return;
                 }
-
                 const rect = e.currentTarget.getBoundingClientRect();
                 const mouseY = e.clientY;
                 const sourceId = draggedItem.id;
-
                 setTodos(prevTodos => {
                     const sourceIdx = prevTodos.findIndex(t => t.id === sourceId);
                     const targetIdx = prevTodos.findIndex(t => t.id === targetTodoId);
                     if (sourceIdx === -1 || targetIdx === -1) return prevTodos;
-
                     const insertBefore = mouseY < rect.top + rect.height / 2;
-
                     const newTodos = [...prevTodos];
                     const [movedTodo] = newTodos.splice(sourceIdx, 1);
-
                     let adjustedTargetIdx = targetIdx;
                     if (sourceIdx < targetIdx) adjustedTargetIdx--;
-
                     const insertIdx = insertBefore ? adjustedTargetIdx : adjustedTargetIdx + 1;
                     newTodos.splice(insertIdx, 0, movedTodo);
-
                     return newTodos;
                 });
-
                 setDraggedItem(null);
                 setDragOverTarget({ type: null, id: null, position: null });
             };
 
-            // Подзадачи
             const handleSubtaskDragStart = (e, todoId, subtaskId) => {
-                e.stopPropagation(); // важно!
+                e.stopPropagation();
                 if (isInteractiveElement(e.target)) {
                     e.preventDefault();
                     return;
@@ -706,11 +769,9 @@
             const handleSubtaskDragOver = (e, targetTodoId, targetSubtaskId) => {
                 e.preventDefault();
                 if (!draggedItem || draggedItem.type !== 'subtask' || draggedItem.todoId !== targetTodoId || draggedItem.id === targetSubtaskId) return;
-
                 const rect = e.currentTarget.getBoundingClientRect();
                 const mouseY = e.clientY;
                 const position = mouseY < rect.top + rect.height / 2 ? 'top' : 'bottom';
-
                 setDragOverTarget({ type: 'subtask', todoId: targetTodoId, id: targetSubtaskId, position });
             };
 
@@ -721,39 +782,30 @@
                     setDragOverTarget({ type: null, id: null, position: null });
                     return;
                 }
-
                 const rect = e.currentTarget.getBoundingClientRect();
                 const mouseY = e.clientY;
                 const sourceId = draggedItem.id;
-
                 setTodos(prevTodos => {
                     return prevTodos.map(todo => {
                         if (todo.id !== targetTodoId) return todo;
-
                         const subtasks = todo.subtasks;
                         const sourceIdx = subtasks.findIndex(s => s.id === sourceId);
                         const targetIdx = subtasks.findIndex(s => s.id === targetSubtaskId);
                         if (sourceIdx === -1 || targetIdx === -1) return todo;
-
                         const insertBefore = mouseY < rect.top + rect.height / 2;
-
                         const newSubtasks = [...subtasks];
                         const [moved] = newSubtasks.splice(sourceIdx, 1);
-
                         let adjustedTargetIdx = targetIdx;
                         if (sourceIdx < targetIdx) adjustedTargetIdx--;
-
                         const insertIdx = insertBefore ? adjustedTargetIdx : adjustedTargetIdx + 1;
                         if (insertIdx < 0 || insertIdx > newSubtasks.length) {
                             console.error('Некорректный индекс вставки:', insertIdx);
                             return todo;
                         }
-
                         newSubtasks.splice(insertIdx, 0, moved);
                         return { ...todo, subtasks: newSubtasks };
                     });
                 });
-
                 setDraggedItem(null);
                 setDragOverTarget({ type: null, id: null, position: null });
             };
@@ -763,10 +815,107 @@
                 setDragOverTarget({ type: null, id: null, position: null });
             };
 
+            // Стили
+            const getAppStyle = () => {
+                if (settings.appTransparent) return { background: 'transparent', color: settings.textColor };
+                return {
+                    background: settings.backgroundType === 'gradient' ? settings.backgroundGradient
+                        : settings.backgroundType === 'color' ? settings.backgroundColor
+                            : settings.backgroundImage ? `url(${settings.backgroundImage}) center/cover no-repeat`
+                                : 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                    color: settings.textColor
+                };
+            };
+
+            const getHeaderStyle = () => {
+                if (settings.headerTransparent) return { background: 'transparent', color: settings.textColor };
+                if (settings.headerUseGlobal) {
+                    return {
+                        background: settings.backgroundType === 'gradient' ? settings.backgroundGradient
+                            : settings.backgroundType === 'color' ? settings.backgroundColor
+                                : settings.backgroundImage ? `url(${settings.backgroundImage}) center/cover no-repeat`
+                                    : 'linear-gradient(to right, #4a00e0, #8e2de2)',
+                        color: settings.textColor
+                    };
+                } else {
+                    return {
+                        background: settings.headerBackground || 'linear-gradient(to right, #4a00e0, #8e2de2)',
+                        color: settings.headerTextColor || settings.textColor
+                    };
+                }
+            };
+
+            const getImportSectionStyle = () => {
+                if (settings.importTransparent) return { background: 'transparent' };
+                if (settings.importUseGlobal) {
+                    return {
+                        background: settings.backgroundType === 'gradient' ? settings.backgroundGradient
+                            : settings.backgroundType === 'color' ? settings.backgroundColor
+                                : settings.backgroundImage ? `url(${settings.backgroundImage}) center/cover no-repeat`
+                                    : '#f9f9f9',
+                        color: settings.textColor
+                    };
+                } else {
+                    return {
+                        background: settings.importSectionBackground || '#f9f9f9',
+                        color: settings.importSectionTextColor || settings.textColor
+                    };
+                }
+            };
+
+            const getTodoListContainerStyle = () => {
+                return {
+                    background: settings.todoListTransparent ? 'transparent' : 'none'
+                };
+            };
+
+            const getTodoItemStyle = (todo) => {
+                if (settings.todoItemTransparent) return { background: 'transparent', color: settings.todoItemTextColor };
+                if (settings.todoItemUseGlobal) {
+                    return {
+                        background: settings.backgroundType === 'gradient' ? settings.backgroundGradient
+                            : settings.backgroundType === 'color' ? settings.backgroundColor
+                                : settings.backgroundImage ? `url(${settings.backgroundImage}) center/cover no-repeat`
+                                    : '#ffffff',
+                        color: settings.textColor
+                    };
+                } else {
+                    return {
+                        background: settings.todoItemBackground || '#ffffff',
+                        color: settings.todoItemTextColor || settings.textColor
+                    };
+                }
+            };
+
+            const getTodoMetaStyle = () => {
+                // Цвет метаданных (если не задан, используем цвет текста задачи или глобальный)
+                return { color: settings.todoItemMetaTextColor || settings.textColor };
+            };
+
+            const getSubtaskItemStyle = (subtask) => {
+                if (settings.subtaskItemTransparent) return { background: 'transparent', color: settings.subtaskItemTextColor };
+                if (settings.subtaskItemUseGlobal) {
+                    return {
+                        background: settings.backgroundType === 'gradient' ? settings.backgroundGradient
+                            : settings.backgroundType === 'color' ? settings.backgroundColor
+                                : settings.backgroundImage ? `url(${settings.backgroundImage}) center/cover no-repeat`
+                                    : '#f8f9fa',
+                        color: settings.textColor
+                    };
+                } else {
+                    return {
+                        background: settings.subtaskItemBackground || '#f8f9fa',
+                        color: settings.subtaskItemTextColor || settings.textColor
+                    };
+                }
+            };
+
             return (
-                <div id="app">
-                    {/* Шапка */}
-                    <div className="header">
+                <div id="app" style={getAppStyle()}>
+                    <div className="header" style={getHeaderStyle()}>
+                        <button className="settings-button" onClick={() => { setTempSettings(settings); setShowSettings(true); }} title="Настройки темы">
+                            <i className="fas fa-palette"></i>
+                        </button>
                         <div className="sync-status synced">
                             <i className="fas fa-clock"></i>
                             {getOperationText(lastOperation.type)}: {formatTimeAgo(lastOperation.time)}
@@ -777,9 +926,8 @@
                         </div>
                     </div>
 
-                    {/* Экспорт/импорт */}
-                    <div className="backup-section">
-                        <p style={{ textAlign: 'center', marginBottom: '10px', color: '#666' }}>
+                    <div className="backup-section" style={getImportSectionStyle()}>
+                        <p style={{ textAlign: 'center', marginBottom: '10px' }}>
                             Сохраните или загрузите задачи из файла
                         </p>
                         <div className="backup-buttons">
@@ -793,7 +941,6 @@
                         </div>
                     </div>
 
-                    {/* Десктопное поле ввода (скрывается на мобильных) */}
                     <div className="input-container">
                         <input
                             type="text"
@@ -808,7 +955,6 @@
                         </button>
                     </div>
 
-                    {/* Фильтры */}
                     <div className="filter-buttons">
                         <div className="filter-group">
                             <button className={`filter-button ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')} title="Все задачи">
@@ -826,8 +972,7 @@
                         </button>
                     </div>
 
-                    {/* Список задач */}
-                    <div className="todo-list-container">
+                    <div className="todo-list-container" style={getTodoListContainerStyle()}>
                         <div className="todo-list">
                             {filteredTodos.length === 0 ? (
                                 <div className="empty-state">
@@ -839,6 +984,8 @@
                                 filteredTodos.map(todo => {
                                     const subtaskStats = getSubtaskStats(todo);
                                     const isTodoMenuOpen = openMenuId === todo.id;
+                                    const todoItemStyle = getTodoItemStyle(todo);
+                                    const metaStyle = getTodoMetaStyle();
                                     return (
                                         <div
                                             key={todo.id}
@@ -850,6 +997,7 @@
                                             onDragOver={(e) => handleTodoDragOver(e, todo.id)}
                                             onDrop={(e) => handleTodoDrop(e, todo.id)}
                                             onDragEnd={handleDragEnd}
+                                            style={todoItemStyle}
                                         >
                                             <div className="todo-main">
                                                 <div className="todo-left">
@@ -888,7 +1036,7 @@
                                                                 {todo.text}
                                                             </div>
                                                         )}
-                                                        <div className="todo-meta">
+                                                        <div className="todo-meta" style={metaStyle}>
                                                             <span className="todo-date">
                                                                 <i className="far fa-calendar-alt"></i>
                                                                 {todo.completed && todo.completedAt ? (
@@ -898,9 +1046,9 @@
                                                                 )}
                                                             </span>
                                                             {todo.subtasks.length > 0 && subtaskStats && (
-                                                                <span className="subtask-stats">
+                                                                <span className="subtask-stats" style={metaStyle}>
                                                                     <i className="fas fa-list"></i>
-                                                                    <span className="subtask-count">{subtaskStats.completed} из {subtaskStats.total} выполнено</span>
+                                                                    <span className="subtask-count" style={{ color: metaStyle.color }}>{subtaskStats.completed} из {subtaskStats.total} выполнено</span>
                                                                 </span>
                                                             )}
                                                         </div>
@@ -926,7 +1074,6 @@
                                                 </div>
                                             </div>
 
-                                            {/* Подзадачи (аккордеон) */}
                                             {todo.isExpanded && (
                                                 <div className="subtasks-accordion">
                                                     <div className="subtasks-content">
@@ -934,6 +1081,7 @@
                                                             {todo.subtasks.length > 0 ? (
                                                                 todo.subtasks.map(subtask => {
                                                                     const isSubtaskMenuOpen = openSubtaskMenuId === `${todo.id}-${subtask.id}`;
+                                                                    const subtaskStyle = getSubtaskItemStyle(subtask);
                                                                     return (
                                                                         <div
                                                                             key={subtask.id}
@@ -945,6 +1093,7 @@
                                                                             onDragOver={(e) => handleSubtaskDragOver(e, todo.id, subtask.id)}
                                                                             onDrop={(e) => handleSubtaskDrop(e, todo.id, subtask.id)}
                                                                             onDragEnd={handleDragEnd}
+                                                                            style={subtaskStyle}
                                                                         >
                                                                             <input
                                                                                 type="checkbox"
@@ -1009,10 +1158,12 @@
                                                                     );
                                                                 })
                                                             ) : (
-                                                                <div className="no-subtasks"><i className="fas fa-inbox"></i><span>Нет подзадач</span></div>
+                                                                <div className="no-subtasks" style={{ color: todoItemStyle.color }}>
+                                                                    <i className="fas fa-inbox"></i>
+                                                                    <span>Нет подзадач</span>
+                                                                </div>
                                                             )}
                                                         </div>
-                                                        {/* Добавление новой подзадачи */}
                                                         <div className="add-subtask-form">
                                                             <input
                                                                 type="text"
@@ -1034,7 +1185,6 @@
                         </div>
                     </div>
 
-                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: форма ввода ----- */}
                     <div className="mobile-add-ui">
                         {mobileAddMode && (
                             <div className="mobile-add-form">
@@ -1048,33 +1198,322 @@
                             </div>
                         )}
                     </div>
-
-                    {/* ----- МОБИЛЬНЫЙ ИНТЕРФЕЙС: ФУТЕР С КНОПКАМИ ----- */}
                     <div className="mobile-footer">
                         <div className="mobile-footer-left">
                             <div id="pwa-footer-button"></div>
                         </div>
                         <div className="mobile-footer-right">
                             {mobileAddMode && (
-                                <button
-                                    className="mobile-fab mobile-fab-cancel"
-                                    onClick={cancelMobileAdd}
-                                    title="Отмена"
-                                >
+                                <button className="mobile-fab mobile-fab-cancel" onClick={cancelMobileAdd} title="Отмена">
                                     <i className="fas fa-times"></i>
                                 </button>
                             )}
-                            <button
-                                className={`mobile-fab ${mobileAddMode ? 'mobile-fab-confirm' : ''}`}
-                                onClick={handleMobileFabClick}
-                                title={mobileAddMode ? 'Добавить задачу' : 'Новая задача'}
-                            >
+                            <button className={`mobile-fab ${mobileAddMode ? 'mobile-fab-confirm' : ''}`} onClick={handleMobileFabClick} title={mobileAddMode ? 'Добавить задачу' : 'Новая задача'}>
                                 <i className={`fas ${mobileAddMode ? 'fa-check' : 'fa-plus'}`}></i>
                             </button>
                         </div>
                     </div>
 
-                    {/* Универсальное окно подтверждения */}
+                    {/* Модальное окно настроек */}
+                    {showSettings && (
+                        <div className="settings-modal" onClick={() => setShowSettings(false)}>
+                            <div className="settings-content" onClick={e => e.stopPropagation()}>
+                                <h2 className="settings-title"><i className="fas fa-palette"></i> Настройки темы</h2>
+
+                                {/* Фон страницы (body) */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('body')}>
+                                        <h3>Фон страницы (body)</h3>
+                                        <i className={`fas fa-chevron-${sections.body ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.body && (
+                                        <div className="section-content">
+                                            <div className="radio-group">
+                                                <label><input type="radio" name="bodyBgType" value="gradient" checked={tempSettings.bodyBackgroundType === 'gradient'} onChange={e => setTempSettings({ ...tempSettings, bodyBackgroundType: e.target.value })} /> Градиент</label>
+                                                <label><input type="radio" name="bodyBgType" value="color" checked={tempSettings.bodyBackgroundType === 'color'} onChange={e => setTempSettings({ ...tempSettings, bodyBackgroundType: e.target.value })} /> Сплошной цвет</label>
+                                                <label><input type="radio" name="bodyBgType" value="image" checked={tempSettings.bodyBackgroundType === 'image'} onChange={e => setTempSettings({ ...tempSettings, bodyBackgroundType: e.target.value })} /> Изображение</label>
+                                            </div>
+                                            {tempSettings.bodyBackgroundType === 'gradient' && (
+                                                <>
+                                                    <div className="gradient-presets">
+                                                        {[
+                                                            'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                                                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                                            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                                                            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+                                                        ].map(grad => (
+                                                            <div key={grad} className={`gradient-preset ${tempSettings.bodyBackgroundGradient === grad ? 'selected' : ''}`} style={{ background: grad }} onClick={() => setTempSettings({ ...tempSettings, bodyBackgroundGradient: grad })} />
+                                                        ))}
+                                                    </div>
+                                                    <p>Или введите свою строку градиента:</p>
+                                                    <input type="text" className="todo-input" value={tempSettings.bodyBackgroundGradient} onChange={e => setTempSettings({ ...tempSettings, bodyBackgroundGradient: e.target.value })} placeholder="linear-gradient(...)" />
+                                                </>
+                                            )}
+                                            {tempSettings.bodyBackgroundType === 'color' && (
+                                                <input type="color" className="color-picker" value={tempSettings.bodyBackgroundColor} onChange={e => setTempSettings({ ...tempSettings, bodyBackgroundColor: e.target.value })} />
+                                            )}
+                                            {tempSettings.bodyBackgroundType === 'image' && (
+                                                <div className="image-upload-area">
+                                                    <label className="image-upload-label">
+                                                        <i className="fas fa-upload"></i> Выберите файл
+                                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file) {
+                                                                const reader = new FileReader();
+                                                                reader.onload = (event) => setTempSettings({ ...tempSettings, bodyBackgroundImage: event.target.result });
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        }} />
+                                                    </label>
+                                                    {tempSettings.bodyBackgroundImage && (
+                                                        <div>
+                                                            <img src={tempSettings.bodyBackgroundImage} alt="preview" className="image-preview" />
+                                                            <button className="remove-image-btn" onClick={() => setTempSettings({ ...tempSettings, bodyBackgroundImage: null })}><i className="fas fa-times"></i> Удалить</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Общий фон приложения #app */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('app')}>
+                                        <h3>Общий фон приложения</h3>
+                                        <i className={`fas fa-chevron-${sections.app ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.app && (
+                                        <div className="section-content">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                                <input type="checkbox" checked={tempSettings.appTransparent} onChange={e => setTempSettings({ ...tempSettings, appTransparent: e.target.checked })} />
+                                                Прозрачный фон
+                                            </label>
+                                            {!tempSettings.appTransparent && (
+                                                <>
+                                                    <div className="radio-group">
+                                                        <label><input type="radio" name="bgType" value="gradient" checked={tempSettings.backgroundType === 'gradient'} onChange={e => setTempSettings({ ...tempSettings, backgroundType: e.target.value })} /> Градиент</label>
+                                                        <label><input type="radio" name="bgType" value="color" checked={tempSettings.backgroundType === 'color'} onChange={e => setTempSettings({ ...tempSettings, backgroundType: e.target.value })} /> Сплошной цвет</label>
+                                                        <label><input type="radio" name="bgType" value="image" checked={tempSettings.backgroundType === 'image'} onChange={e => setTempSettings({ ...tempSettings, backgroundType: e.target.value })} /> Изображение</label>
+                                                    </div>
+                                                    {tempSettings.backgroundType === 'gradient' && (
+                                                        <>
+                                                            <div className="gradient-presets">
+                                                                {[
+                                                                    'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                                                                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                                    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                                                                    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                                                                    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                                                                    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+                                                                ].map(grad => (
+                                                                    <div key={grad} className={`gradient-preset ${tempSettings.backgroundGradient === grad ? 'selected' : ''}`} style={{ background: grad }} onClick={() => setTempSettings({ ...tempSettings, backgroundGradient: grad })} />
+                                                                ))}
+                                                            </div>
+                                                            <p>Или введите свою строку градиента:</p>
+                                                            <input type="text" className="todo-input" value={tempSettings.backgroundGradient} onChange={e => setTempSettings({ ...tempSettings, backgroundGradient: e.target.value })} placeholder="linear-gradient(...)" />
+                                                        </>
+                                                    )}
+                                                    {tempSettings.backgroundType === 'color' && (
+                                                        <input type="color" className="color-picker" value={tempSettings.backgroundColor} onChange={e => setTempSettings({ ...tempSettings, backgroundColor: e.target.value })} />
+                                                    )}
+                                                    {tempSettings.backgroundType === 'image' && (
+                                                        <div className="image-upload-area">
+                                                            <label className="image-upload-label">
+                                                                <i className="fas fa-upload"></i> Выберите файл
+                                                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                                                                    const file = e.target.files[0];
+                                                                    if (file) {
+                                                                        const reader = new FileReader();
+                                                                        reader.onload = (event) => setTempSettings({ ...tempSettings, backgroundImage: event.target.result });
+                                                                        reader.readAsDataURL(file);
+                                                                    }
+                                                                }} />
+                                                            </label>
+                                                            {tempSettings.backgroundImage && (
+                                                                <div>
+                                                                    <img src={tempSettings.backgroundImage} alt="preview" className="image-preview" />
+                                                                    <button className="remove-image-btn" onClick={() => setTempSettings({ ...tempSettings, backgroundImage: null })}><i className="fas fa-times"></i> Удалить</button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Общий цвет текста */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('text')}>
+                                        <h3>Общий цвет текста</h3>
+                                        <i className={`fas fa-chevron-${sections.text ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.text && (
+                                        <div className="section-content">
+                                            <input type="color" className="color-picker" value={tempSettings.textColor} onChange={e => setTempSettings({ ...tempSettings, textColor: e.target.value })} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Шапка */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('header')}>
+                                        <h3>Шапка (Header)</h3>
+                                        <i className={`fas fa-chevron-${sections.header ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.header && (
+                                        <div className="section-content">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.headerUseGlobal} onChange={e => setTempSettings({ ...tempSettings, headerUseGlobal: e.target.checked })} />
+                                                Как в общих настройках
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.headerTransparent} onChange={e => setTempSettings({ ...tempSettings, headerTransparent: e.target.checked })} />
+                                                Прозрачный фон
+                                            </label>
+                                            {!tempSettings.headerUseGlobal && !tempSettings.headerTransparent && (
+                                                <>
+                                                    <p style={{ marginTop: '10px' }}>Цвета для градиента:</p>
+                                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                        <input type="color" value={tempSettings.headerGradientColor1} onChange={e => setTempSettings({ ...tempSettings, headerGradientColor1: e.target.value })} />
+                                                        <input type="color" value={tempSettings.headerGradientColor2} onChange={e => setTempSettings({ ...tempSettings, headerGradientColor2: e.target.value })} />
+                                                        <button className="edit-button" onClick={() => {
+                                                            const grad = `linear-gradient(135deg, ${tempSettings.headerGradientColor1} 0%, ${tempSettings.headerGradientColor2} 100%)`;
+                                                            setTempSettings({ ...tempSettings, headerBackground: grad });
+                                                        }} style={{ padding: '6px 12px' }}>Применить градиент</button>
+                                                    </div>
+                                                    <p>Фон (можно ввести вручную)</p>
+                                                    <input type="text" className="todo-input" value={tempSettings.headerBackground} onChange={e => setTempSettings({ ...tempSettings, headerBackground: e.target.value })} placeholder="linear-gradient(...) или цвет" />
+                                                    <p>Цвет текста в шапке</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.headerTextColor || settings.textColor} onChange={e => setTempSettings({ ...tempSettings, headerTextColor: e.target.value })} />
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Блок импорта */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('import')}>
+                                        <h3>Блок импорта/экспорта</h3>
+                                        <i className={`fas fa-chevron-${sections.import ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.import && (
+                                        <div className="section-content">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.importUseGlobal} onChange={e => setTempSettings({ ...tempSettings, importUseGlobal: e.target.checked })} />
+                                                Как в общих настройках
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.importTransparent} onChange={e => setTempSettings({ ...tempSettings, importTransparent: e.target.checked })} />
+                                                Прозрачный фон
+                                            </label>
+                                            {!tempSettings.importUseGlobal && !tempSettings.importTransparent && (
+                                                <>
+                                                    <p style={{ marginTop: '10px' }}>Цвета для градиента:</p>
+                                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                        <input type="color" value={tempSettings.importGradientColor1} onChange={e => setTempSettings({ ...tempSettings, importGradientColor1: e.target.value })} />
+                                                        <input type="color" value={tempSettings.importGradientColor2} onChange={e => setTempSettings({ ...tempSettings, importGradientColor2: e.target.value })} />
+                                                        <button className="edit-button" onClick={() => {
+                                                            const grad = `linear-gradient(135deg, ${tempSettings.importGradientColor1} 0%, ${tempSettings.importGradientColor2} 100%)`;
+                                                            setTempSettings({ ...tempSettings, importSectionBackground: grad });
+                                                        }} style={{ padding: '6px 12px' }}>Применить градиент</button>
+                                                    </div>
+                                                    <p>Фон</p>
+                                                    <input type="text" className="todo-input" value={tempSettings.importSectionBackground} onChange={e => setTempSettings({ ...tempSettings, importSectionBackground: e.target.value })} placeholder="linear-gradient(...) или цвет" />
+                                                    <p>Цвет текста</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.importSectionTextColor || settings.textColor} onChange={e => setTempSettings({ ...tempSettings, importSectionTextColor: e.target.value })} />
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Карточки задач */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('todoItems')}>
+                                        <h3>Карточки задач</h3>
+                                        <i className={`fas fa-chevron-${sections.todoItems ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.todoItems && (
+                                        <div className="section-content">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.todoItemUseGlobal} onChange={e => setTempSettings({ ...tempSettings, todoItemUseGlobal: e.target.checked })} />
+                                                Как в общих настройках
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.todoItemTransparent} onChange={e => setTempSettings({ ...tempSettings, todoItemTransparent: e.target.checked })} />
+                                                Прозрачный фон
+                                            </label>
+                                            {!tempSettings.todoItemUseGlobal && !tempSettings.todoItemTransparent && (
+                                                <>
+                                                    <p>Фон задачи</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.todoItemBackground} onChange={e => setTempSettings({ ...tempSettings, todoItemBackground: e.target.value })} />
+                                                    <p>Цвет текста задачи</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.todoItemTextColor} onChange={e => setTempSettings({ ...tempSettings, todoItemTextColor: e.target.value })} />
+                                                </>
+                                            )}
+                                            {/* Новая настройка цвета метаданных */}
+                                            <p style={{ marginTop: '10px' }}>Цвет метаданных задачи (дата, статистика)</p>
+                                            <input type="color" className="color-picker" value={tempSettings.todoItemMetaTextColor} onChange={e => setTempSettings({ ...tempSettings, todoItemMetaTextColor: e.target.value })} />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Подзадачи */}
+                                <div className="settings-section">
+                                    <div className="section-header" onClick={() => toggleSection('subtasks')}>
+                                        <h3>Подзадачи</h3>
+                                        <i className={`fas fa-chevron-${sections.subtasks ? 'down' : 'right'}`}></i>
+                                    </div>
+                                    {sections.subtasks && (
+                                        <div className="section-content">
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.subtaskItemUseGlobal} onChange={e => setTempSettings({ ...tempSettings, subtaskItemUseGlobal: e.target.checked })} />
+                                                Как в общих настройках
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                                <input type="checkbox" checked={tempSettings.subtaskItemTransparent} onChange={e => setTempSettings({ ...tempSettings, subtaskItemTransparent: e.target.checked })} />
+                                                Прозрачный фон
+                                            </label>
+                                            {!tempSettings.subtaskItemUseGlobal && !tempSettings.subtaskItemTransparent && (
+                                                <>
+                                                    <p>Фон подзадачи</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.subtaskItemBackground} onChange={e => setTempSettings({ ...tempSettings, subtaskItemBackground: e.target.value })} />
+                                                    <p>Цвет текста подзадачи</p>
+                                                    <input type="color" className="color-picker" value={tempSettings.subtaskItemTextColor} onChange={e => setTempSettings({ ...tempSettings, subtaskItemTextColor: e.target.value })} />
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Предпросмотр (всегда виден) */}
+                                <div className="settings-section">
+                                    <h3>Предпросмотр</h3>
+                                    <div className="background-preview" style={{
+                                        background: tempSettings.backgroundType === 'gradient' ? tempSettings.backgroundGradient
+                                            : tempSettings.backgroundType === 'color' ? tempSettings.backgroundColor
+                                                : tempSettings.backgroundImage ? `url(${tempSettings.backgroundImage}) center/cover no-repeat`
+                                                    : '#f0f0f0',
+                                        color: tempSettings.textColor
+                                    }}>
+                                        <span style={{ padding: '10px', display: 'block' }}>Пример текста задачи</span>
+                                    </div>
+                                </div>
+
+                                <div className="settings-actions">
+                                    <button className="settings-save-btn" onClick={() => { setSettings(tempSettings); setShowSettings(false); }}>Сохранить</button>
+                                    <button className="settings-cancel-btn" onClick={() => setShowSettings(false)}>Отмена</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {showConfirm && confirmConfig && (
                         <div className="confirm-modal">
                             <div className="confirm-content">
@@ -1091,7 +1530,6 @@
                         </div>
                     )}
 
-                    {/* Уведомление */}
                     {notification && (
                         <div className="notification">
                             <i className="fas fa-info-circle"></i> {notification}
@@ -1101,42 +1539,30 @@
             );
         }
 
-        // Глобальная функция для корректировки ширины #app
         window.fixAppWidth = function () {
             const app = document.getElementById('app');
             if (!app) return;
-
-            // Получаем отступы body (могут меняться в медиа-запросах)
             const bodyStyles = window.getComputedStyle(document.body);
             const paddingLeft = parseFloat(bodyStyles.paddingLeft) || 0;
             const paddingRight = parseFloat(bodyStyles.paddingRight) || 0;
-
-            // Используем visualViewport для более точной ширины (особенно на iOS)
             let viewportWidth;
             if (window.visualViewport) {
                 viewportWidth = window.visualViewport.width;
             } else {
                 viewportWidth = document.documentElement.clientWidth;
             }
-
             const availableWidth = viewportWidth - paddingLeft - paddingRight;
-            const maxWidth = 500; // должно совпадать с max-width из CSS
-
+            const maxWidth = 500;
             const newWidth = Math.min(availableWidth, maxWidth);
             app.style.width = newWidth + 'px';
         };
 
-        // Вызываем при загрузке и всех изменениях размера
         window.addEventListener('load', window.fixAppWidth);
         window.addEventListener('resize', window.fixAppWidth);
         window.addEventListener('orientationchange', window.fixAppWidth);
-
-        // Слушаем изменения visualViewport (если поддерживается)
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', window.fixAppWidth);
         }
-
-        // Дополнительный вызов через 100 мс, чтобы учесть возможные задержки рендеринга
         setTimeout(window.fixAppWidth, 500);
 
         const container = document.getElementById('root');
@@ -1174,34 +1600,22 @@
 
         function openInstalledApp() {
             console.log('Пытаемся открыть установленное приложение');
-
-            // Если уже запущены в standalone – ничего не делаем
             if (isStandalone()) {
                 console.log('Уже в приложении');
                 return;
             }
-
             const currentUrl = window.location.href;
-
-            // Android: используем intent без fallback, чтобы избежать перезагрузки
             if (/android/i.test(navigator.userAgent)) {
-                // Формируем корректный путь (host + pathname + search + hash)
                 const urlPath = window.location.host + window.location.pathname + window.location.search + window.location.hash;
                 const intentUrl = `intent://${urlPath}#Intent;scheme=https;end`;
-
-                // Пытаемся открыть intent
                 window.location.href = intentUrl;
-
-                // Таймаут для проверки, открылось ли приложение
                 setTimeout(() => {
                     if (document.visibilityState === 'visible') {
                         showNotification('Не удалось открыть приложение. Откройте его с главного экрана.');
                         showOpenAppInstructions();
                     }
                 }, 1000);
-            }
-            // iOS: пробуем открыть в новой вкладке (иногда автоматически переключает)
-            else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+            } else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
                 window.open(currentUrl, '_blank');
                 setTimeout(() => {
                     if (document.visibilityState === 'visible') {
@@ -1209,17 +1623,13 @@
                         showOpenAppInstructions();
                     }
                 }, 1000);
-            }
-            // Остальные платформы – показываем инструкцию
-            else {
+            } else {
                 showOpenAppInstructions();
             }
         }
 
-        // Функция обновления содержимого и обработчика существующей кнопки
         function updateInstallButton() {
             if (!installButton) return;
-
             if (isAppInstalled()) {
                 installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
                 installButton.classList.add('open-app-button');
@@ -1243,45 +1653,33 @@
             }
         }
 
-        // Функция создания кнопки (вызывается один раз)
         function createInstallButton() {
-            // Если кнопка уже существует и прикреплена к DOM, просто обновляем её
             if (installButton && document.body.contains(installButton)) {
                 updateInstallButton();
                 return;
             }
-
-            // Удаляем старую кнопку, если она есть где-то ещё
             if (installButton && installButton.parentNode) {
                 installButton.parentNode.removeChild(installButton);
             }
             installButton = null;
-
             if (isStandalone()) {
                 console.log('Приложение уже запущено в standalone режиме - кнопка не нужна');
                 return;
             }
-
             const isMobile = window.matchMedia('(max-width: 500px)').matches;
-
             installButton = document.createElement('button');
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
-
-            // Заполняем содержимое (пока без обработчика, но можно сразу)
             updateInstallButton();
-
             if (isMobile) {
                 const tryAppendToFooter = () => {
                     const footerContainer = document.getElementById('pwa-footer-button');
                     if (footerContainer) {
-                        // Убедимся, что кнопка не прикреплена где-то ещё
                         if (installButton.parentNode) {
                             installButton.parentNode.removeChild(installButton);
                         }
                         footerContainer.appendChild(installButton);
                     } else {
-                        // Если футер ещё не отрендерен, пробуем снова через 50 мс
                         setTimeout(tryAppendToFooter, 50);
                     }
                 };
@@ -1289,12 +1687,9 @@
             } else {
                 document.body.appendChild(installButton);
             }
-
-            // Пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
                 setTimeout(window.fixAppWidth, 500);
             }
-
             console.log('Кнопка создана/обновлена: установлено =', isAppInstalled());
         }
 
@@ -1313,16 +1708,11 @@
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
-                    // НЕ помечаем приложение как установленное сразу
-                    // Ждём события appinstalled
-                    // Оставляем кнопку в состоянии "Установка..." до получения подтверждения
-                    // Если через некоторое время событие не пришло – вернём кнопку обратно
                     setTimeout(() => {
                         if (installButton && installButton.innerHTML.includes('spinner') && !appInstalled) {
-                            // Возвращаем кнопку в исходное состояние, если установка не подтвердилась
                             updateInstallButton();
                         }
-                    }, 10000); // 10 секунд таймаут
+                    }, 10000);
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
@@ -1431,20 +1821,17 @@
             setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 5000);
         }
 
-        // === ОБРАБОТЧИКИ СОБЫТИЙ ===
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('🎯 beforeinstallprompt сработал');
             e.preventDefault();
             deferredPrompt = e;
             if (!isStandalone()) {
-                // Обновляем существующую кнопку или создаём новую
                 if (installButton) {
                     updateInstallButton();
                 } else {
                     createInstallButton();
                 }
             }
-            // Пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
                 setTimeout(window.fixAppWidth, 500);
             }
@@ -1454,30 +1841,23 @@
 
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA успешно установлено (событие получено)');
-
-            // Если уведомление уже было показано (например, из-за повторного события), игнорируем
             if (notificationShown) return;
             notificationShown = true;
-
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
-
-            // Ждём 7 секунд, чтобы установка физически завершилась
             setTimeout(() => {
                 if (!isStandalone()) {
                     if (installButton) {
-                        updateInstallButton(); // кнопка станет "Открыть в приложении"
+                        updateInstallButton();
                     } else {
                         createInstallButton();
                     }
                 }
-
                 if (window.fixAppWidth) {
                     setTimeout(window.fixAppWidth, 500);
                 }
-
                 showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
-            }, 10000); // 7 секунд – оптимально для большинства устройств
+            }, 10000);
         });
 
         window.addEventListener('load', () => {
@@ -1486,15 +1866,11 @@
                 console.log('Приложение запущено в standalone режиме');
                 return;
             }
-
-            // Восстанавливаем состояние установки из localStorage
             appInstalled = localStorage.getItem('pwaInstalled') === 'true';
-
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker зарегистрирован:', registration.scope);
-                        // Создаём кнопку после регистрации SW (но не раньше, чем через 2 сек, чтобы дать время на beforeinstallprompt)
                         setTimeout(() => {
                             if (!installButton && !isStandalone()) createInstallButton();
                         }, 2000);
@@ -1511,7 +1887,6 @@
 
         window.addEventListener('resize', () => {
             if (!isStandalone()) {
-                // При изменении размера окна пересоздаём кнопку (для адаптации позиции)
                 createInstallButton();
             }
         });
@@ -1554,23 +1929,13 @@
         function fixAppWidth() {
             const app = document.getElementById('app');
             if (!app) return;
-
-            // Получаем актуальные отступы body
             const bodyStyles = window.getComputedStyle(document.body);
             const paddingLeft = parseFloat(bodyStyles.paddingLeft) || 0;
             const paddingRight = parseFloat(bodyStyles.paddingRight) || 0;
-
-            // Доступная ширина = ширина окна минус горизонтальные padding'и body
             const availableWidth = window.innerWidth - paddingLeft - paddingRight;
-
-            // Ограничиваем максимальной шириной 500px (как в CSS)
             const newWidth = Math.min(availableWidth, 500);
-
-            // Применяем ширину
             app.style.width = newWidth + 'px';
         }
-
-        // Запускаем при загрузке и при изменении размера окна
         window.addEventListener('load', fixAppWidth);
         window.addEventListener('resize', fixAppWidth);
     </script>
