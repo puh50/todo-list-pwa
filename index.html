@@ -1174,19 +1174,44 @@
 
         function openInstalledApp() {
             console.log('Пытаемся открыть установленное приложение');
-            if (navigator.userAgent.includes('Android') || navigator.userAgent.includes('Chrome')) {
-                const currentUrl = window.location.href;
-                const appUrl = currentUrl.replace(/^https?:\/\//, 'todoapp://');
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = appUrl;
-                document.body.appendChild(iframe);
+
+            // Если уже запущены в standalone – ничего не делаем
+            if (isStandalone()) {
+                console.log('Уже в приложении');
+                return;
+            }
+
+            const currentUrl = window.location.href;
+
+            // Android: используем intent
+            if (/android/i.test(navigator.userAgent)) {
+                // Формируем intent, который предложит системе открыть URL в доступных приложениях
+                // (включая установленное PWA, если оно зарегистрировано как обработчик https)
+                const intentUrl = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+                window.location.href = intentUrl;
+
+                // Если через 1 секунду приложение не открылось (страница не выгрузилась), покажем инструкцию
                 setTimeout(() => {
-                    document.body.removeChild(iframe);
-                    showNotification('Не удалось открыть приложение. Откройте его вручную.');
-                    showOpenAppInstructions();
-                }, 500);
-            } else {
+                    if (document.visibilityState === 'visible') {
+                        showNotification('Не удалось открыть приложение. Откройте его с главного экрана.');
+                        showOpenAppInstructions();
+                    }
+                }, 1000);
+            }
+            // iOS: пробуем открыть ссылку – иногда Safari автоматически переключает на standalone-версию
+            else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+                // Пробуем открыть в новой вкладке – иногда это вызывает переключение
+                window.open(currentUrl, '_blank');
+
+                setTimeout(() => {
+                    if (document.visibilityState === 'visible') {
+                        showNotification('Не удалось открыть приложение. Откройте его с главного экрана.');
+                        showOpenAppInstructions();
+                    }
+                }, 1000);
+            }
+            // Остальные платформы – показываем инструкцию
+            else {
                 showOpenAppInstructions();
             }
         }
