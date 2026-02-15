@@ -1191,10 +1191,44 @@
             }
         }
 
-        // Функция создания кнопки PWA (адаптивная: мобильный → футер, десктоп → body)
+        // Функция обновления содержимого и обработчика существующей кнопки
+        function updateInstallButton() {
+            if (!installButton) return;
+
+            if (isAppInstalled()) {
+                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
+                installButton.classList.add('open-app-button');
+                installButton.onclick = openInstalledApp;
+                installButton.disabled = false;
+            } else if (isIOS() && isSafari()) {
+                installButton.innerHTML = '<i class="fas fa-plus-circle"></i><span class="install-button-text">Добавить на главный экран</span>';
+                installButton.classList.remove('open-app-button');
+                installButton.onclick = showIOSInstallInstructions;
+                installButton.disabled = false;
+            } else if (canInstallPWA() && deferredPrompt) {
+                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
+                installButton.classList.remove('open-app-button');
+                installButton.onclick = installPWA;
+                installButton.disabled = false;
+            } else {
+                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
+                installButton.classList.remove('open-app-button');
+                installButton.onclick = showInstallInstructions;
+                installButton.disabled = false;
+            }
+        }
+
+        // Функция создания кнопки (вызывается один раз)
         function createInstallButton() {
+            // Если кнопка уже существует и прикреплена к DOM, просто обновляем её
             if (installButton && document.body.contains(installButton)) {
-                document.body.removeChild(installButton);
+                updateInstallButton();
+                return;
+            }
+
+            // Удаляем старую кнопку, если она есть где-то ещё
+            if (installButton && installButton.parentNode) {
+                installButton.parentNode.removeChild(installButton);
             }
             installButton = null;
 
@@ -1209,20 +1243,8 @@
             installButton.className = 'install-button';
             installButton.id = 'pwa-install-button';
 
-            if (isAppInstalled()) {
-                installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
-                installButton.classList.add('open-app-button');
-                installButton.onclick = openInstalledApp;
-            } else if (isIOS() && isSafari()) {
-                installButton.innerHTML = '<i class="fas fa-plus-circle"></i><span class="install-button-text">Добавить на главный экран</span>';
-                installButton.onclick = showIOSInstallInstructions;
-            } else if (canInstallPWA() && deferredPrompt) {
-                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
-                installButton.onclick = installPWA;
-            } else {
-                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
-                installButton.onclick = showInstallInstructions;
-            }
+            // Заполняем содержимое (пока без обработчика, но можно сразу)
+            updateInstallButton();
 
             if (isMobile) {
                 const tryAppendToFooter = () => {
@@ -1243,13 +1265,12 @@
                 document.body.appendChild(installButton);
             }
 
-            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+            // Пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
-                // Небольшая задержка, чтобы браузер обновил геометрию
                 setTimeout(window.fixAppWidth, 500);
             }
 
-            console.log('Кнопка создана: установлено =', isAppInstalled());
+            console.log('Кнопка создана/обновлена: установлено =', isAppInstalled());
         }
 
         async function installPWA() {
@@ -1273,12 +1294,8 @@
 
                     // Сразу обновляем кнопку, если она существует и мы не в standalone-режиме
                     if (!isStandalone() && installButton) {
-                        installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
-                        installButton.classList.add('open-app-button');
-                        installButton.onclick = openInstalledApp;
-                        installButton.disabled = false;
+                        updateInstallButton();
                     } else {
-                        // Если кнопки нет, создадим заново (на всякий случай)
                         createInstallButton();
                     }
 
@@ -1288,9 +1305,7 @@
                     showNotification('Установка отменена');
                     // Возвращаем кнопку в исходное состояние
                     if (installButton) {
-                        installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
-                        installButton.onclick = installPWA;
-                        installButton.disabled = false;
+                        updateInstallButton();
                     } else {
                         createInstallButton();
                     }
@@ -1300,9 +1315,7 @@
                 console.error('Ошибка установки:', error);
                 showNotification('Ошибка установки. Попробуйте через меню браузера.');
                 if (installButton) {
-                    installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
-                    installButton.onclick = installPWA;
-                    installButton.disabled = false;
+                    updateInstallButton();
                 } else {
                     createInstallButton();
                 }
@@ -1313,17 +1326,17 @@
             const modal = document.createElement('div');
             modal.className = 'install-modal';
             modal.innerHTML = `
-                <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-mobile-alt" style="color: #007AFF;"></i> Добавить на главный экран</h2>
-                    <div style="text-align: left; margin-bottom: 25px; color: #555;">
-                        <p><strong>1.</strong> Нажмите кнопку "Поделиться" <i class="fas fa-share-square"></i></p>
-                        <p><strong>2.</strong> Прокрутите вниз и выберите "На экран "Домой"</p>
-                        <p><strong>3.</strong> Нажмите "Добавить" в правом верхнем углу</p>
-                        <p><strong>4.</strong> Готово! Приложение появится на главном экране</p>
-                    </div>
-                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Понятно</button>
-                </div>
-            `;
+        <div class="install-modal-content">
+            <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-mobile-alt" style="color: #007AFF;"></i> Добавить на главный экран</h2>
+            <div style="text-align: left; margin-bottom: 25px; color: #555;">
+                <p><strong>1.</strong> Нажмите кнопку "Поделиться" <i class="fas fa-share-square"></i></p>
+                <p><strong>2.</strong> Прокрутите вниз и выберите "На экран "Домой"</p>
+                <p><strong>3.</strong> Нажмите "Добавить" в правом верхнем углу</p>
+                <p><strong>4.</strong> Готово! Приложение появится на главном экране</p>
+            </div>
+            <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Понятно</button>
+        </div>
+    `;
             document.body.appendChild(modal);
             modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
             modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
@@ -1344,12 +1357,12 @@
                 instructions = `<p><strong>Чтобы открыть в установленном приложении:</strong></p><p>1. Откройте приложение <strong>"To-Do List"</strong> с главного экрана вашего устройства</p><p>2. Или используйте меню браузера для открытия в приложении</p>`;
             }
             modal.innerHTML = `
-                <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-external-link-alt" style="color: #00b09b;"></i> Открыть в приложении</h2>
-                    <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
-                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #00b09b, #96c93d); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
-                </div>
-            `;
+        <div class="install-modal-content">
+            <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-external-link-alt" style="color: #00b09b;"></i> Открыть в приложении</h2>
+            <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
+            <button id="closeInstallModal" style="background: linear-gradient(135deg, #00b09b, #96c93d); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
+        </div>
+    `;
             document.body.appendChild(modal);
             modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
             modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
@@ -1368,12 +1381,12 @@
                 instructions = `<p><strong>Для установки приложения:</strong></p><p>1. Откройте меню браузера (⋮ или ☰)</p><p>2. Найдите пункт "Установить приложение"</p><p>3. Подтвердите установку</p>`;
             }
             modal.innerHTML = `
-                <div class="install-modal-content">
-                    <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-download" style="color: #4a00e0;"></i> Установить приложение</h2>
-                    <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
-                    <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
-                </div>
-            `;
+        <div class="install-modal-content">
+            <h2 style="color: #333; margin-bottom: 20px;"><i class="fas fa-download" style="color: #4a00e0;"></i> Установить приложение</h2>
+            <div style="text-align: left; margin-bottom: 25px; color: #555;">${instructions}</div>
+            <button id="closeInstallModal" style="background: linear-gradient(135deg, #4a00e0, #8e2de2); color: white; border: none; border-radius: 10px; padding: 12px 30px; font-size: 16px; cursor: pointer; font-weight: 600;">Закрыть</button>
+        </div>
+    `;
             document.body.appendChild(modal);
             modal.querySelector('#closeInstallModal').addEventListener('click', () => document.body.removeChild(modal));
             modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
@@ -1401,10 +1414,16 @@
             console.log('🎯 beforeinstallprompt сработал');
             e.preventDefault();
             deferredPrompt = e;
-            if (!isStandalone()) createInstallButton();
-            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+            if (!isStandalone()) {
+                // Обновляем существующую кнопку или создаём новую
+                if (installButton) {
+                    updateInstallButton();
+                } else {
+                    createInstallButton();
+                }
+            }
+            // Пересчитываем ширину #app после добавления кнопки
             if (window.fixAppWidth) {
-                // Небольшая задержка, чтобы браузер обновил геометрию
                 setTimeout(window.fixAppWidth, 500);
             }
         });
@@ -1416,19 +1435,12 @@
 
             if (!isStandalone()) {
                 if (installButton) {
-                    // Если кнопка ещё не стала кнопкой открытия (например, из-за сбоя в installPWA)
-                    if (!installButton.classList.contains('open-app-button')) {
-                        installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
-                        installButton.classList.add('open-app-button');
-                        installButton.onclick = openInstalledApp;
-                        installButton.disabled = false;
-                    }
+                    updateInstallButton();
                 } else {
                     createInstallButton();
                 }
             }
 
-            // Пересчитываем ширину #app после изменения кнопки
             if (window.fixAppWidth) {
                 setTimeout(window.fixAppWidth, 500);
             }
@@ -1439,12 +1451,22 @@
 
         window.addEventListener('load', () => {
             console.log('Загрузка страницы завершена');
-            if (isStandalone()) { console.log('Приложение запущено в standalone режиме'); return; }
+            if (isStandalone()) {
+                console.log('Приложение запущено в standalone режиме');
+                return;
+            }
+
+            // Восстанавливаем состояние установки из localStorage
+            appInstalled = localStorage.getItem('pwaInstalled') === 'true';
+
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('service-worker.js')
                     .then(registration => {
                         console.log('✅ Service Worker зарегистрирован:', registration.scope);
-                        setTimeout(() => { if (!installButton && !isStandalone()) createInstallButton(); }, 2000);
+                        // Создаём кнопку после регистрации SW (но не раньше, чем через 2 сек, чтобы дать время на beforeinstallprompt)
+                        setTimeout(() => {
+                            if (!installButton && !isStandalone()) createInstallButton();
+                        }, 2000);
                     })
                     .catch(error => {
                         console.log('❌ Ошибка регистрации Service Worker:', error);
@@ -1457,7 +1479,10 @@
         });
 
         window.addEventListener('resize', () => {
-            if (!isStandalone()) createInstallButton();
+            if (!isStandalone()) {
+                // При изменении размера окна пересоздаём кнопку (для адаптации позиции)
+                createInstallButton();
+            }
         });
 
         function updateOnlineStatus() {
