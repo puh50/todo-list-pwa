@@ -1196,6 +1196,7 @@
             if (installButton && document.body.contains(installButton)) {
                 document.body.removeChild(installButton);
             }
+            installButton = null;
 
             if (isStandalone()) {
                 console.log('Приложение уже запущено в standalone режиме - кнопка не нужна');
@@ -1224,12 +1225,20 @@
             }
 
             if (isMobile) {
-                const footerContainer = document.getElementById('pwa-footer-button');
-                if (footerContainer) {
-                    footerContainer.appendChild(installButton);
-                } else {
-                    document.body.appendChild(installButton);
-                }
+                const tryAppendToFooter = () => {
+                    const footerContainer = document.getElementById('pwa-footer-button');
+                    if (footerContainer) {
+                        // Убедимся, что кнопка не прикреплена где-то ещё
+                        if (installButton.parentNode) {
+                            installButton.parentNode.removeChild(installButton);
+                        }
+                        footerContainer.appendChild(installButton);
+                    } else {
+                        // Если футер ещё не отрендерен, пробуем снова через 50 мс
+                        setTimeout(tryAppendToFooter, 50);
+                    }
+                };
+                tryAppendToFooter();
             } else {
                 document.body.appendChild(installButton);
             }
