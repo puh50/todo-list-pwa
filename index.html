@@ -1416,11 +1416,13 @@
 
             if (!isStandalone()) {
                 if (installButton) {
-                    // Обновляем существующую кнопку
-                    installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
-                    installButton.classList.add('open-app-button');
-                    installButton.onclick = openInstalledApp;
-                    installButton.disabled = false;
+                    // Если кнопка ещё не стала кнопкой открытия (например, из-за сбоя в installPWA)
+                    if (!installButton.classList.contains('open-app-button')) {
+                        installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
+                        installButton.classList.add('open-app-button');
+                        installButton.onclick = openInstalledApp;
+                        installButton.disabled = false;
+                    }
                 } else {
                     createInstallButton();
                 }
