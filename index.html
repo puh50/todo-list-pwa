@@ -1258,25 +1258,54 @@
                 return;
             }
             console.log('Начинаем установку PWA');
-            installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="install-button-text">Установка...</span>';
-            installButton.disabled = true;
+            if (installButton) {
+                installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="install-button-text">Установка...</span>';
+                installButton.disabled = true;
+            }
             try {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     console.log('✅ Пользователь принял установку');
+                    // Помечаем, что приложение установлено (даже если событие appinstalled ещё не пришло)
+                    appInstalled = true;
+                    localStorage.setItem('pwaInstalled', 'true');
+
+                    // Сразу обновляем кнопку, если она существует и мы не в standalone-режиме
+                    if (!isStandalone() && installButton) {
+                        installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
+                        installButton.classList.add('open-app-button');
+                        installButton.onclick = openInstalledApp;
+                        installButton.disabled = false;
+                    } else {
+                        // Если кнопки нет, создадим заново (на всякий случай)
+                        createInstallButton();
+                    }
+
                     showNotification('Приложение устанавливается...');
                 } else {
                     console.log('❌ Пользователь отклонил установку');
                     showNotification('Установка отменена');
-                    setTimeout(() => { createInstallButton(); }, 2000);
+                    // Возвращаем кнопку в исходное состояние
+                    if (installButton) {
+                        installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
+                        installButton.onclick = installPWA;
+                        installButton.disabled = false;
+                    } else {
+                        createInstallButton();
+                    }
                 }
                 deferredPrompt = null;
             } catch (error) {
                 console.error('Ошибка установки:', error);
                 showNotification('Ошибка установки. Попробуйте через меню браузера.');
-                installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
-                installButton.disabled = false;
+                if (installButton) {
+                    installButton.innerHTML = '<i class="fas fa-download"></i><span class="install-button-text">Установить приложение</span>';
+                    installButton.onclick = installPWA;
+                    installButton.disabled = false;
+                } else {
+                    createInstallButton();
+                }
             }
         }
 
