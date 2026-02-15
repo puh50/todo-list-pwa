@@ -1183,14 +1183,16 @@
 
             const currentUrl = window.location.href;
 
-            // Android: используем intent
+            // Android: используем intent без fallback, чтобы избежать перезагрузки
             if (/android/i.test(navigator.userAgent)) {
-                // Формируем intent, который предложит системе открыть URL в доступных приложениях
-                // (включая установленное PWA, если оно зарегистрировано как обработчик https)
-                const intentUrl = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+                // Формируем корректный путь (host + pathname + search + hash)
+                const urlPath = window.location.host + window.location.pathname + window.location.search + window.location.hash;
+                const intentUrl = `intent://${urlPath}#Intent;scheme=https;end`;
+
+                // Пытаемся открыть intent
                 window.location.href = intentUrl;
 
-                // Если через 1 секунду приложение не открылось (страница не выгрузилась), покажем инструкцию
+                // Таймаут для проверки, открылось ли приложение
                 setTimeout(() => {
                     if (document.visibilityState === 'visible') {
                         showNotification('Не удалось открыть приложение. Откройте его с главного экрана.');
@@ -1198,11 +1200,9 @@
                     }
                 }, 1000);
             }
-            // iOS: пробуем открыть ссылку – иногда Safari автоматически переключает на standalone-версию
+            // iOS: пробуем открыть в новой вкладке (иногда автоматически переключает)
             else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-                // Пробуем открыть в новой вкладке – иногда это вызывает переключение
                 window.open(currentUrl, '_blank');
-
                 setTimeout(() => {
                     if (document.visibilityState === 'visible') {
                         showNotification('Не удалось открыть приложение. Откройте его с главного экрана.');
