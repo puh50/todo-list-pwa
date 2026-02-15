@@ -1384,12 +1384,24 @@
             console.log('🎉 PWA успешно установлено!');
             appInstalled = true;
             localStorage.setItem('pwaInstalled', 'true');
-            if (!isStandalone()) createInstallButton();
-            // !!! ВАЖНО: пересчитываем ширину #app после добавления кнопки
+
+            if (!isStandalone()) {
+                if (installButton) {
+                    // Обновляем существующую кнопку
+                    installButton.innerHTML = '<i class="fas fa-external-link-alt"></i><span class="install-button-text">Открыть в приложении</span>';
+                    installButton.classList.add('open-app-button');
+                    installButton.onclick = openInstalledApp;
+                    installButton.disabled = false;
+                } else {
+                    createInstallButton();
+                }
+            }
+
+            // Пересчитываем ширину #app после изменения кнопки
             if (window.fixAppWidth) {
-                // Небольшая задержка, чтобы браузер обновил геометрию
                 setTimeout(window.fixAppWidth, 500);
             }
+
             deferredPrompt = null;
             showNotification('Приложение установлено! Теперь вы можете открыть его с главного экрана.');
         });
