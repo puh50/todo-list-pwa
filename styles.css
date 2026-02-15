@@ -664,6 +664,7 @@ body {
     word-break: break-word;
     line-height: 1.4;
     white-space: pre-wrap;
+    /* color: inherit; */
 }
 
 .todo-completed-text {
@@ -678,7 +679,7 @@ body {
     gap: 10px;
     margin-top: 5px;
     font-size: 12px;
-    color: #666;
+    color: inherit;
 }
 
 .todo-date {
@@ -686,18 +687,19 @@ body {
     align-items: center;
     gap: 4px;
     padding-right: 8px;
+    color: inherit;
 }
 
 .subtask-stats {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #f8f9fa;
     border-radius: 12px;
+    color: inherit;
 }
 
 .subtask-count {
-    color: #495057;
+    color: inherit;
     font-size: 12px;
 }
 
@@ -815,7 +817,7 @@ body {
 .subtask-text {
     flex: 1;
     font-size: 14px;
-    color: #495057;
+    color: inherit;
     word-break: break-word;
     line-height: 1.3;
     white-space: pre-wrap;
@@ -876,7 +878,7 @@ body {
 .no-subtasks {
     text-align: center;
     padding: 20px 10px;
-    color: #6c757d;
+    color: inherit;
     font-style: italic;
     font-size: 14px;
     display: flex;
@@ -1126,7 +1128,8 @@ body {
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-wrap: wrap; /* на случай очень узких экранов */
+        flex-wrap: wrap;
+        /* на случай очень узких экранов */
         gap: 4px;
     }
 
@@ -1495,4 +1498,267 @@ body {
 
 .subtask-item.drag-over-bottom {
     border-bottom: 2px solid #4a00e0 !important;
+}
+
+/* Стили для кнопки настроек и модального окна */
+.settings-button {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    z-index: 20;
+    transition: background 0.2s;
+}
+
+.settings-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.settings-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20000;
+    padding: 20px;
+}
+
+.settings-content {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 450px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.settings-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-section {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.settings-section h3 {
+    font-size: 18px;
+    color: #555;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    color: #444;
+    cursor: pointer;
+}
+
+.color-picker {
+    width: 100%;
+    height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.gradient-presets {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+.gradient-preset {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s;
+}
+
+.gradient-preset:hover {
+    transform: scale(1.05);
+}
+
+.gradient-preset.selected {
+    border-color: #4a00e0;
+}
+
+.image-upload-area {
+    margin: 15px 0;
+}
+
+.image-upload-label {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px dashed #aaa;
+    transition: background 0.2s;
+}
+
+.image-upload-label:hover {
+    background: #e0e0e0;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 150px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.remove-image-btn {
+    background: #ff4757;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    margin-top: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.settings-save-btn,
+.settings-cancel-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.settings-save-btn:active,
+.settings-cancel-btn:active {
+    transform: scale(0.97);
+}
+
+.settings-save-btn {
+    background: linear-gradient(135deg, #4a00e0, #8e2de2);
+    color: white;
+}
+
+.settings-cancel-btn {
+    background: #f1f1f1;
+    color: #333;
+}
+
+/* Предпросмотр текущего фона в окне настроек */
+.background-preview {
+    width: 100%;
+    height: 100px;
+    border-radius: 12px;
+    margin: 10px 0;
+    border: 2px solid #ddd;
+    background-size: cover;
+    background-position: center;
+}
+
+/* Фиксированные стили для модального окна настроек (не зависят от глобальных настроек) */
+.settings-content {
+    background: white !important;
+    color: #333333 !important;
+}
+
+.settings-content input,
+.settings-content button,
+.settings-content textarea,
+.settings-content select {
+    background: white !important;
+    color: #333333 !important;
+    border: 1px solid #cccccc !important;
+}
+
+.settings-content .todo-input,
+.settings-content .color-picker {
+    background: white !important;
+    color: #333333 !important;
+}
+
+.settings-content .gradient-preset {
+    border: 2px solid transparent;
+}
+
+.settings-content .gradient-preset.selected {
+    border-color: #4a00e0 !important;
+}
+
+.settings-content .section-header {
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 0;
+}
+
+.settings-content .section-header i {
+    color: #333333 !important;
+}
+
+.settings-content .settings-save-btn {
+    background: linear-gradient(135deg, #4a00e0, #8e2de2) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.settings-content .settings-cancel-btn {
+    background: #f1f1f1 !important;
+    color: #333333 !important;
+    border: none !important;
+}
+
+.settings-content .remove-image-btn {
+    background: #ff4757 !important;
+    color: white !important;
+    border: none !important;
 }
